@@ -24,6 +24,7 @@ import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
+import com.orientechnologies.orient.core.db.graph.OPropertyGraph;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 
@@ -56,13 +57,13 @@ public class SQLCreateVertexAndEdgeTest {
 
     // VERTEXES
     ODocument v1 = database.command(new OCommandSQL("create vertex")).execute();
-    Assert.assertEquals(v1.getClassName(), OGraphDatabase.VERTEX_CLASS_NAME);
+    Assert.assertEquals(v1.getClassName(), OPropertyGraph.VERTEX_CLASS_NAME);
 
     ODocument v2 = database.command(new OCommandSQL("create vertex V1")).execute();
     Assert.assertEquals(v2.getClassName(), "V1");
 
     ODocument v3 = database.command(new OCommandSQL("create vertex set brand = 'fiat'")).execute();
-    Assert.assertEquals(v3.getClassName(), OGraphDatabase.VERTEX_CLASS_NAME);
+    Assert.assertEquals(v3.getClassName(), OPropertyGraph.VERTEX_CLASS_NAME);
     Assert.assertEquals(v3.field("brand"), "fiat");
 
     ODocument v4 = database.command(new OCommandSQL("create vertex V1 set brand = 'fiat',name = 'wow'")).execute();
@@ -79,7 +80,7 @@ public class SQLCreateVertexAndEdgeTest {
         .execute();
     Assert.assertFalse(edges.isEmpty());
     ODocument e1 = edges.get(0);
-    Assert.assertEquals(e1.getClassName(), OGraphDatabase.EDGE_CLASS_NAME);
+    Assert.assertEquals(e1.getClassName(), OPropertyGraph.EDGE_CLASS_NAME);
     Assert.assertEquals(e1.field("out"), v1);
     Assert.assertEquals(e1.field("in"), v2);
 
@@ -94,7 +95,7 @@ public class SQLCreateVertexAndEdgeTest {
         new OCommandSQL("create edge from " + v1.getIdentity() + " to " + v4.getIdentity() + " set weight = 3")).execute();
     Assert.assertFalse(edges.isEmpty());
     ODocument e3 = edges.get(0);
-    Assert.assertEquals(e3.getClassName(), OGraphDatabase.EDGE_CLASS_NAME);
+    Assert.assertEquals(e3.getClassName(), OPropertyGraph.EDGE_CLASS_NAME);
     Assert.assertEquals(e3.field("out"), v1);
     Assert.assertEquals(e3.field("in"), v4);
     Assert.assertEquals(e3.field("weight"), 3);

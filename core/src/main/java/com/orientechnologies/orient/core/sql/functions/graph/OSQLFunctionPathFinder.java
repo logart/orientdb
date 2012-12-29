@@ -26,7 +26,7 @@ import java.util.Set;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase.DIRECTION;
+import com.orientechnologies.orient.core.db.graph.OLabeledGraph.DIRECTION;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionMathAbstract;

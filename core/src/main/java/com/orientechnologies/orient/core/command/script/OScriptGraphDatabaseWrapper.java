@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.graph.OAbstractPropertyGraph;
 import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
 import com.orientechnologies.orient.core.db.record.ODatabaseRecordTx;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -34,215 +35,215 @@ import com.orientechnologies.orient.core.type.tree.OMVRBTreeRIDSet;
  * 
  */
 public class OScriptGraphDatabaseWrapper extends OScriptDocumentDatabaseWrapper {
-	public OScriptGraphDatabaseWrapper(final OGraphDatabase iDatabase) {
-		super(iDatabase);
-	}
+  public OScriptGraphDatabaseWrapper(final OGraphDatabase iDatabase) {
+    super(iDatabase);
+  }
 
-	public OScriptGraphDatabaseWrapper(final ODatabaseDocumentTx iDatabase) {
-		super(new OGraphDatabase((ODatabaseRecordTx) iDatabase.getUnderlying()));
-	}
+  public OScriptGraphDatabaseWrapper(final ODatabaseDocumentTx iDatabase) {
+    super(new OGraphDatabase((ODatabaseRecordTx) iDatabase.getUnderlying()));
+  }
 
-	public OScriptGraphDatabaseWrapper(final ODatabaseRecordTx iDatabase) {
-		super(iDatabase);
-	}
+  public OScriptGraphDatabaseWrapper(final ODatabaseRecordTx iDatabase) {
+    super(iDatabase);
+  }
 
-	public OScriptGraphDatabaseWrapper(final String iURL) {
-		super(iURL);
-	}
+  public OScriptGraphDatabaseWrapper(final String iURL) {
+    super(iURL);
+  }
 
-	public long countVertexes() {
-		return ((OGraphDatabase) database).countVertexes();
-	}
+  public long countVertexes() {
+    return ((OAbstractPropertyGraph) database).countVertexes();
+  }
 
-	public long countEdges() {
-		return ((OGraphDatabase) database).countEdges();
-	}
+  public long countEdges() {
+    return ((OAbstractPropertyGraph) database).countEdges();
+  }
 
-	public Iterable<ODocument> browseVertices() {
-		return ((OGraphDatabase) database).browseVertices();
-	}
+  public Iterable<ODocument> browseVertices() {
+    return ((OAbstractPropertyGraph) database).browseVertices();
+  }
 
-	public Iterable<ODocument> browseVertices(boolean iPolymorphic) {
-		return ((OGraphDatabase) database).browseVertices(iPolymorphic);
-	}
+  public Iterable<ODocument> browseVertices(boolean iPolymorphic) {
+    return ((OAbstractPropertyGraph) database).browseVertices(iPolymorphic);
+  }
 
-	public Iterable<ODocument> browseEdges() {
-		return ((OGraphDatabase) database).browseEdges();
-	}
+  public Iterable<ODocument> browseEdges() {
+    return ((OAbstractPropertyGraph) database).browseEdges();
+  }
 
-	public Iterable<ODocument> browseEdges(boolean iPolymorphic) {
-		return ((OGraphDatabase) database).browseEdges(iPolymorphic);
-	}
+  public Iterable<ODocument> browseEdges(boolean iPolymorphic) {
+    return ((OAbstractPropertyGraph) database).browseEdges(iPolymorphic);
+  }
 
-	public Iterable<ODocument> browseElements(String iClass, boolean iPolymorphic) {
-		return ((OGraphDatabase) database).browseElements(iClass, iPolymorphic);
-	}
+  public Iterable<ODocument> browseElements(String iClass, boolean iPolymorphic) {
+    return ((OAbstractPropertyGraph) database).browseElements(iClass, iPolymorphic);
+  }
 
-	public ODocument createVertex() {
-		return ((OGraphDatabase) database).createVertex();
-	}
+  public ODocument createVertex() {
+    return ((OAbstractPropertyGraph) database).createVertex();
+  }
 
-	public ODocument createVertex(String iClassName) {
-		return ((OGraphDatabase) database).createVertex(iClassName);
-	}
+  public ODocument createVertex(String iClassName) {
+    return ((OAbstractPropertyGraph) database).createVertex(iClassName);
+  }
 
-	public ODocument createEdge(ORID iSourceVertexRid, ORID iDestVertexRid) {
-		return ((OGraphDatabase) database).createEdge(iSourceVertexRid, iDestVertexRid);
-	}
+  public ODocument createEdge(ORID iSourceVertexRid, ORID iDestVertexRid) {
+    return ((OAbstractPropertyGraph) database).createEdge(iSourceVertexRid, iDestVertexRid);
+  }
 
-	public ODocument createEdge(ORID iSourceVertexRid, ORID iDestVertexRid, String iClassName) {
-		return ((OGraphDatabase) database).createEdge(iSourceVertexRid, iDestVertexRid, iClassName);
-	}
+  public ODocument createEdge(ORID iSourceVertexRid, ORID iDestVertexRid, String iClassName) {
+    return ((OAbstractPropertyGraph) database).createEdge(iSourceVertexRid, iDestVertexRid, iClassName);
+  }
 
-	public void removeVertex(ODocument iVertex) {
-		((OGraphDatabase) database).removeVertex(iVertex);
-	}
+  public void removeVertex(ODocument iVertex) {
+    ((OAbstractPropertyGraph) database).removeVertex(iVertex);
+  }
 
-	public void removeEdge(ODocument iEdge) {
-		((OGraphDatabase) database).removeEdge(iEdge);
-	}
+  public void removeEdge(ODocument iEdge) {
+    ((OAbstractPropertyGraph) database).removeEdge(iEdge);
+  }
 
-	public ODocument createEdge(ODocument iSourceVertex, ODocument iDestVertex) {
-		return ((OGraphDatabase) database).createEdge(iSourceVertex, iDestVertex);
-	}
+  public ODocument createEdge(ODocument iSourceVertex, ODocument iDestVertex) {
+    return ((OAbstractPropertyGraph) database).createEdge(iSourceVertex, iDestVertex);
+  }
 
-	public ODocument createEdge(ODocument iOutVertex, ODocument iInVertex, String iClassName) {
-		return ((OGraphDatabase) database).createEdge(iOutVertex, iInVertex, iClassName);
-	}
+  public ODocument createEdge(ODocument iOutVertex, ODocument iInVertex, String iClassName) {
+    return ((OAbstractPropertyGraph) database).createEdge(iOutVertex, iInVertex, iClassName);
+  }
 
-	public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2) {
-		return ((OGraphDatabase) database).getEdgesBetweenVertexes(iVertex1, iVertex2);
-	}
+  public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2) {
+    return ((OAbstractPropertyGraph) database).getEdgesBetweenVertexes(iVertex1, iVertex2);
+  }
 
-	public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2, String[] iLabels) {
-		return ((OGraphDatabase) database).getEdgesBetweenVertexes(iVertex1, iVertex2, iLabels);
-	}
+  public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2, String[] iLabels) {
+    return ((OAbstractPropertyGraph) database).getEdgesBetweenVertexes(iVertex1, iVertex2, iLabels);
+  }
 
-	public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2, String[] iLabels, String[] iClassNames) {
-		return ((OGraphDatabase) database).getEdgesBetweenVertexes(iVertex1, iVertex2, iLabels, iClassNames);
-	}
+  public Set<OIdentifiable> getEdgesBetweenVertexes(ODocument iVertex1, ODocument iVertex2, String[] iLabels, String[] iClassNames) {
+    return ((OAbstractPropertyGraph) database).getEdgesBetweenVertexes(iVertex1, iVertex2, iLabels, iClassNames);
+  }
 
-	public Set<OIdentifiable> getOutEdges(OIdentifiable iVertex) {
-		return ((OGraphDatabase) database).getOutEdges(iVertex);
-	}
+  public Set<OIdentifiable> getOutEdges(OIdentifiable iVertex) {
+    return ((OAbstractPropertyGraph) database).getOutEdges(iVertex);
+  }
 
-	public Set<OIdentifiable> getOutEdges(OIdentifiable iVertex, String iLabel) {
-		return ((OGraphDatabase) database).getOutEdges(iVertex, iLabel);
-	}
+  public Set<OIdentifiable> getOutEdges(OIdentifiable iVertex, String iLabel) {
+    return ((OAbstractPropertyGraph) database).getOutEdges(iVertex, iLabel);
+  }
 
-	public Set<OIdentifiable> getOutEdgesHavingProperties(OIdentifiable iVertex, Map<String, Object> iProperties) {
-		return ((OGraphDatabase) database).getOutEdgesHavingProperties(iVertex, iProperties);
-	}
+  public Set<OIdentifiable> getOutEdgesHavingProperties(OIdentifiable iVertex, Map<String, Object> iProperties) {
+    return ((OAbstractPropertyGraph) database).getOutEdgesHavingProperties(iVertex, iProperties);
+  }
 
-	public Set<OIdentifiable> getOutEdgesHavingProperties(OIdentifiable iVertex, Iterable<String> iProperties) {
-		return ((OGraphDatabase) database).getOutEdgesHavingProperties(iVertex, iProperties);
-	}
+  public Set<OIdentifiable> getOutEdgesHavingProperties(OIdentifiable iVertex, Iterable<String> iProperties) {
+    return ((OAbstractPropertyGraph) database).getOutEdgesHavingProperties(iVertex, iProperties);
+  }
 
-	public Set<OIdentifiable> getInEdges(OIdentifiable iVertex) {
-		return ((OGraphDatabase) database).getInEdges(iVertex);
-	}
+  public Set<OIdentifiable> getInEdges(OIdentifiable iVertex) {
+    return ((OAbstractPropertyGraph) database).getInEdges(iVertex);
+  }
 
-	public Set<OIdentifiable> getInEdges(OIdentifiable iVertex, String iLabel) {
-		return ((OGraphDatabase) database).getInEdges(iVertex, iLabel);
-	}
+  public Set<OIdentifiable> getInEdges(OIdentifiable iVertex, String iLabel) {
+    return ((OAbstractPropertyGraph) database).getInEdges(iVertex, iLabel);
+  }
 
-	public Set<OIdentifiable> getInEdgesHavingProperties(OIdentifiable iVertex, Iterable<String> iProperties) {
-		return ((OGraphDatabase) database).getInEdgesHavingProperties(iVertex, iProperties);
-	}
+  public Set<OIdentifiable> getInEdgesHavingProperties(OIdentifiable iVertex, Iterable<String> iProperties) {
+    return ((OAbstractPropertyGraph) database).getInEdgesHavingProperties(iVertex, iProperties);
+  }
 
-	public Set<OIdentifiable> getInEdgesHavingProperties(ODocument iVertex, Map<String, Object> iProperties) {
-		return ((OGraphDatabase) database).getInEdgesHavingProperties(iVertex, iProperties);
-	}
+  public Set<OIdentifiable> getInEdgesHavingProperties(ODocument iVertex, Map<String, Object> iProperties) {
+    return ((OAbstractPropertyGraph) database).getInEdgesHavingProperties(iVertex, iProperties);
+  }
 
-	public ODocument getInVertex(OIdentifiable iEdge) {
-		return ((OGraphDatabase) database).getInVertex(iEdge);
-	}
+  public ODocument getInVertex(OIdentifiable iEdge) {
+    return ((OAbstractPropertyGraph) database).getInVertex(iEdge);
+  }
 
-	public ODocument getOutVertex(OIdentifiable iEdge) {
-		return ((OGraphDatabase) database).getOutVertex(iEdge);
-	}
+  public ODocument getOutVertex(OIdentifiable iEdge) {
+    return ((OAbstractPropertyGraph) database).getOutVertex(iEdge);
+  }
 
-	public ODocument getRoot(String iName) {
-		return ((OGraphDatabase) database).getRoot(iName);
-	}
+  public ODocument getRoot(String iName) {
+    return ((OAbstractPropertyGraph) database).getRoot(iName);
+  }
 
-	public ODocument getRoot(String iName, String iFetchPlan) {
-		return ((OGraphDatabase) database).getRoot(iName, iFetchPlan);
-	}
+  public ODocument getRoot(String iName, String iFetchPlan) {
+    return ((OAbstractPropertyGraph) database).getRoot(iName, iFetchPlan);
+  }
 
-	public OGraphDatabase setRoot(String iName, ODocument iNode) {
-		return ((OGraphDatabase) database).setRoot(iName, iNode);
-	}
+  public OAbstractPropertyGraph setRoot(String iName, ODocument iNode) {
+    return ((OAbstractPropertyGraph) database).setRoot(iName, iNode);
+  }
 
-	public OClass createVertexType(String iClassName) {
-		return ((OGraphDatabase) database).createVertexType(iClassName);
-	}
+  public OClass createVertexType(String iClassName) {
+    return ((OAbstractPropertyGraph) database).createVertexType(iClassName);
+  }
 
-	public OClass createVertexType(String iClassName, String iSuperClassName) {
-		return ((OGraphDatabase) database).createVertexType(iClassName, iSuperClassName);
-	}
+  public OClass createVertexType(String iClassName, String iSuperClassName) {
+    return ((OAbstractPropertyGraph) database).createVertexType(iClassName, iSuperClassName);
+  }
 
-	public OClass createVertexType(String iClassName, OClass iSuperClass) {
-		return ((OGraphDatabase) database).createVertexType(iClassName, iSuperClass);
-	}
+  public OClass createVertexType(String iClassName, OClass iSuperClass) {
+    return ((OAbstractPropertyGraph) database).createVertexType(iClassName, iSuperClass);
+  }
 
-	public OClass getVertexType(String iClassName) {
-		return ((OGraphDatabase) database).getVertexType(iClassName);
-	}
+  public OClass getVertexType(String iClassName) {
+    return ((OAbstractPropertyGraph) database).getVertexType(iClassName);
+  }
 
-	public OClass createEdgeType(String iClassName) {
-		return ((OGraphDatabase) database).createEdgeType(iClassName);
-	}
+  public OClass createEdgeType(String iClassName) {
+    return ((OAbstractPropertyGraph) database).createEdgeType(iClassName);
+  }
 
-	public OClass createEdgeType(String iClassName, String iSuperClassName) {
-		return ((OGraphDatabase) database).createEdgeType(iClassName, iSuperClassName);
-	}
+  public OClass createEdgeType(String iClassName, String iSuperClassName) {
+    return ((OAbstractPropertyGraph) database).createEdgeType(iClassName, iSuperClassName);
+  }
 
-	public OClass createEdgeType(String iClassName, OClass iSuperClass) {
-		return ((OGraphDatabase) database).createEdgeType(iClassName, iSuperClass);
-	}
+  public OClass createEdgeType(String iClassName, OClass iSuperClass) {
+    return ((OAbstractPropertyGraph) database).createEdgeType(iClassName, iSuperClass);
+  }
 
-	public OClass getEdgeType(String iClassName) {
-		return ((OGraphDatabase) database).getEdgeType(iClassName);
-	}
+  public OClass getEdgeType(String iClassName) {
+    return ((OAbstractPropertyGraph) database).getEdgeType(iClassName);
+  }
 
-	public boolean isSafeMode() {
-		return ((OGraphDatabase) database).isSafeMode();
-	}
+  public boolean isSafeMode() {
+    return ((OAbstractPropertyGraph) database).isSafeMode();
+  }
 
-	public void setSafeMode(boolean safeMode) {
-		((OGraphDatabase) database).setSafeMode(safeMode);
-	}
+  public void setSafeMode(boolean safeMode) {
+    ((OAbstractPropertyGraph) database).setSafeMode(safeMode);
+  }
 
-	public OClass getVertexBaseClass() {
-		return ((OGraphDatabase) database).getVertexBaseClass();
-	}
+  public OClass getVertexBaseClass() {
+    return ((OAbstractPropertyGraph) database).getVertexBaseClass();
+  }
 
-	public OClass getEdgeBaseClass() {
-		return ((OGraphDatabase) database).getEdgeBaseClass();
-	}
+  public OClass getEdgeBaseClass() {
+    return ((OAbstractPropertyGraph) database).getEdgeBaseClass();
+  }
 
-	public Set<OIdentifiable> filterEdgesByProperties(OMVRBTreeRIDSet iEdges, Iterable<String> iPropertyNames) {
-		return ((OGraphDatabase) database).filterEdgesByProperties(iEdges, iPropertyNames);
-	}
+  public Set<OIdentifiable> filterEdgesByProperties(OMVRBTreeRIDSet iEdges, Iterable<String> iPropertyNames) {
+    return ((OAbstractPropertyGraph) database).filterEdgesByProperties(iEdges, iPropertyNames);
+  }
 
-	public Set<OIdentifiable> filterEdgesByProperties(OMVRBTreeRIDSet iEdges, Map<String, Object> iProperties) {
-		return ((OGraphDatabase) database).filterEdgesByProperties(iEdges, iProperties);
-	}
+  public Set<OIdentifiable> filterEdgesByProperties(OMVRBTreeRIDSet iEdges, Map<String, Object> iProperties) {
+    return ((OAbstractPropertyGraph) database).filterEdgesByProperties(iEdges, iProperties);
+  }
 
-	public boolean isUseCustomTypes() {
-		return ((OGraphDatabase) database).isUseCustomTypes();
-	}
+  public boolean isUseCustomTypes() {
+    return ((OAbstractPropertyGraph) database).isUseCustomTypes();
+  }
 
-	public void setUseCustomTypes(boolean useCustomTypes) {
-		((OGraphDatabase) database).setUseCustomTypes(useCustomTypes);
-	}
+  public void setUseCustomTypes(boolean useCustomTypes) {
+    ((OAbstractPropertyGraph) database).setUseCustomTypes(useCustomTypes);
+  }
 
-	public boolean isVertex(ODocument iRecord) {
-		return ((OGraphDatabase) database).isVertex(iRecord);
-	}
+  public boolean isVertex(ODocument iRecord) {
+    return ((OAbstractPropertyGraph) database).isVertex(iRecord);
+  }
 
-	public boolean isEdge(ODocument iRecord) {
-		return ((OGraphDatabase) database).isEdge(iRecord);
-	}
+  public boolean isEdge(ODocument iRecord) {
+    return ((OAbstractPropertyGraph) database).isEdge(iRecord);
+  }
 }

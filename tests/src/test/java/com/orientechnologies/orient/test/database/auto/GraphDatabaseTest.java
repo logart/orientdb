@@ -43,7 +43,6 @@ import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
-import com.orientechnologies.orient.object.db.graph.OGraphElement;
 
 @Test
 public class GraphDatabaseTest {
@@ -143,15 +142,15 @@ public class GraphDatabaseTest {
     Assert.assertNotNull(database.getOutEdges(tom, "drives"));
     Assert.assertFalse(database.getOutEdges(tom, "drives").isEmpty());
 
-    List<OGraphElement> result = database.query(new OSQLSynchQuery<OGraphElement>(
+    List<ODocument> result = database.query(new OSQLSynchQuery<ODocument>(
         "select out[in.@class = 'GraphCar'].in from V where name = 'Tom'"));
     Assert.assertEquals(result.size(), 1);
 
-    result = database.query(new OSQLSynchQuery<OGraphElement>(
+    result = database.query(new OSQLSynchQuery<ODocument>(
         "select out[label='drives'][in.brand = 'Ferrari'].in from V where name = 'Tom'"));
     Assert.assertEquals(result.size(), 1);
 
-    result = database.query(new OSQLSynchQuery<OGraphElement>("select out[in.brand = 'Ferrari'].in from V where name = 'Tom'"));
+    result = database.query(new OSQLSynchQuery<ODocument>("select out[in.brand = 'Ferrari'].in from V where name = 'Tom'"));
     Assert.assertEquals(result.size(), 1);
   }
 
