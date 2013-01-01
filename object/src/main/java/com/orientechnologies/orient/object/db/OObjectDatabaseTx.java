@@ -342,6 +342,29 @@ public class OObjectDatabaseTx extends ODatabasePojoAbstract<Object> implements 
     return (RET) save(iPojo, iClusterName, OPERATION_MODE.SYNCHRONOUS, false, null, null);
   }
 
+  @Override
+  public boolean updatedReplica(Object iPojo) {
+    OSerializationThreadLocal.INSTANCE.get().clear();
+
+    // GET THE ASSOCIATED DOCUMENT
+    final Object proxiedObject = OObjectEntitySerializer.serializeObject(iPojo, this);
+    final ODocument record = getRecordByUserObject(proxiedObject, true);
+    boolean result;
+    try {
+      record.setInternalStatus(com.orientechnologies.orient.core.db.record.ORecordElement.STATUS.MARSHALLING);
+
+      result = underlying.updatedReplica(record);
+
+      ((OObjectProxyMethodHandler) ((ProxyObject) proxiedObject).getHandler()).updateLoadedFieldMap(proxiedObject);
+      // RE-REGISTER FOR NEW RECORDS SINCE THE ID HAS CHANGED
+      registerUserObject(proxiedObject, record);
+    } finally {
+      record.setInternalStatus(com.orientechnologies.orient.core.db.record.ORecordElement.STATUS.LOADED);
+    }
+
+    return result;
+  }
+
   /**
    * Saves an object to the database forcing a record cluster where to store it. First checks if the object is new or not. In case
    * it's new a new ODocument is created and bound to the object, otherwise the ODocument is retrieved and updated. The object is
@@ -391,14 +414,6 @@ public class OObjectDatabaseTx extends ODatabasePojoAbstract<Object> implements 
       }
       return (RET) proxiedObject;
     }
-  }
-
-  protected void deleteOrphans(OObjectProxyMethodHandler handler) {
-    for (ORID orphan : handler.getOrphans()) {
-      deleteCascade((ODocument) underlying.load(orphan));
-      underlying.delete(orphan);
-    }
-    handler.getOrphans().clear();
   }
 
   public ODatabaseObject delete(final Object iPojo) {
@@ -689,18 +704,6 @@ public class OObjectDatabaseTx extends ODatabasePojoAbstract<Object> implements 
     return TYPE;
   }
 
-  protected void init() {
-    entityManager = OEntityManager.getEntityManagerByDatabaseURL(getURL());
-    entityManager.setClassHandler(OObjectEntityClassHandler.getInstance());
-    saveOnlyDirty = OGlobalConfiguration.OBJECT_SAVE_ONLY_DIRTY.getValueAsBoolean();
-    OObjectSerializerHelper.register();
-    lazyLoading = true;
-    if (!isClosed() && entityManager.getEntityClass(OUser.class.getSimpleName()) == null) {
-      entityManager.registerEntityClass(OUser.class);
-      entityManager.registerEntityClass(ORole.class);
-    }
-  }
-
   @Override
   public ODocument getRecordByUserObject(Object iPojo, boolean iCreateIfNotAvailable) {
     if (iPojo instanceof Proxy)
@@ -715,9 +718,6 @@ public class OObjectDatabaseTx extends ODatabasePojoAbstract<Object> implements 
     return OObjectEntityEnhancer.getInstance().getProxiedInstance(document.getClassName(), getEntityManager(), document, null);
   }
 
-  /**
-   * Register a new POJO
-   */
   @Override
   public void registerUserObject(final Object iObject, final ORecordInternal<?> iRecord) {
   }
@@ -733,8 +733,28 @@ public class OObjectDatabaseTx extends ODatabasePojoAbstract<Object> implements 
     OObjectEntityEnhancer.getInstance().registerClassMethodFilter(iClass, iMethodFilter);
   }
 
-  public void deregisterClassMethodFilter(Class<?> iClass) {
+  public void deregisterClassMethodFilter(final Class<?> iClass) {
     OObjectEntityEnhancer.getInstance().deregisterClassMethodFilter(iClass);
+  }
+
+  protected void init() {
+    entityManager = OEntityManager.getEntityManagerByDatabaseURL(getURL());
+    entityManager.setClassHandler(OObjectEntityClassHandler.getInstance());
+    saveOnlyDirty = OGlobalConfiguration.OBJECT_SAVE_ONLY_DIRTY.getValueAsBoolean();
+    OObjectSerializerHelper.register();
+    lazyLoading = true;
+    if (!isClosed() && entityManager.getEntityClass(OUser.class.getSimpleName()) == null) {
+      entityManager.registerEntityClass(OUser.class);
+      entityManager.registerEntityClass(ORole.class);
+    }
+  }
+
+  protected void deleteOrphans(final OObjectProxyMethodHandler handler) {
+    for (ORID orphan : handler.getOrphans()) {
+      deleteCascade((ODocument) underlying.load(orphan));
+      underlying.delete(orphan);
+    }
+    handler.getOrphans().clear();
   }
 
 }

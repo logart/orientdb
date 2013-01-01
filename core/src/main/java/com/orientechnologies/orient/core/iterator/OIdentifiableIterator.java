@@ -249,40 +249,46 @@ public abstract class OIdentifiableIterator<REC extends OIdentifiable> implement
       // LIMIT REACHED
       return null;
 
-    final boolean moveResult;
-    switch (iMovement) {
-    case 1:
-      moveResult = nextPosition();
-      break;
-    case -1:
-      moveResult = prevPosition();
-      break;
-    case 0:
-      moveResult = checkCurrentPosition();
-      break;
-    default:
-      throw new IllegalStateException("Invalid movement value : " + iMovement);
-    }
+    do {
+      final boolean moveResult;
+      switch (iMovement) {
+      case 1:
+        moveResult = nextPosition();
+        break;
+      case -1:
+        moveResult = prevPosition();
+        break;
+      case 0:
+        moveResult = checkCurrentPosition();
+        break;
+      default:
+        throw new IllegalStateException("Invalid movement value : " + iMovement);
+      }
 
-    if (!moveResult)
-      return null;
+      if (!moveResult)
+        return null;
 
-    if (iRecord != null) {
-      iRecord.setIdentity(new ORecordId(current.clusterId, current.clusterPosition));
-      iRecord = lowLevelDatabase.load(iRecord, fetchPlan, false, iterateThroughTombstones);
-    } else
-      iRecord = lowLevelDatabase.load(current, fetchPlan, false, iterateThroughTombstones);
+      if (iRecord != null) {
+        iRecord.setIdentity(new ORecordId(current.clusterId, current.clusterPosition));
+        iRecord = lowLevelDatabase.load(iRecord, fetchPlan, false, iterateThroughTombstones);
+      } else
+        iRecord = lowLevelDatabase.load(current, fetchPlan, false, iterateThroughTombstones);
 
-    if (iRecord != null)
-      browsedRecords++;
+      if (iRecord != null) {
+        browsedRecords++;
+        return iRecord;
+      }
+    } while (iMovement != 0);
 
-    return iRecord;
+    return null;
   }
 
   protected boolean nextPosition() {
-    if (positionsToProcess == null)
+    if (positionsToProcess == null) {
       positionsToProcess = dbStorage.ceilingPhysicalPositions(current.clusterId, new OPhysicalPosition(firstClusterEntry));
-    else {
+      if (positionsToProcess == null)
+        return false;
+    } else {
       if (currentEntry.compareTo(lastClusterEntry) >= 0)
         return false;
     }
@@ -319,6 +325,8 @@ public abstract class OIdentifiableIterator<REC extends OIdentifiable> implement
   protected boolean prevPosition() {
     if (positionsToProcess == null) {
       positionsToProcess = dbStorage.floorPhysicalPositions(current.clusterId, new OPhysicalPosition(lastClusterEntry));
+      if (positionsToProcess == null)
+        return false;
 
       if (positionsToProcess.length == 0)
         return false;

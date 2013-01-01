@@ -18,6 +18,7 @@ package com.orientechnologies.orient.core.type.tree.provider;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.ODatabaseRecord;
+import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.exception.OConfigurationException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
@@ -157,9 +158,15 @@ public abstract class OMVRBTreeProviderAbstract<K, V> implements OMVRBTreeProvid
   }
 
   protected void save(final ODatabaseRecord iDb) {
-    record.fromStream(toStream());
-    record.setDirty();
-    record.save(clusterName);
+    for (int i = 0; i < 3; ++i)
+      try {
+        record.fromStream(toStream());
+        record.setDirty();
+        record.save(clusterName);
+        break;
+      } catch (OConcurrentModificationException e) {
+        record.reload();
+      }
   }
 
   public void save() {
@@ -198,7 +205,13 @@ public abstract class OMVRBTreeProviderAbstract<K, V> implements OMVRBTreeProvid
   }
 
   protected void delete(final ODatabaseRecord iDb) {
-    iDb.delete(record);
+    for (int i = 0; i < 3; ++i)
+      try {
+        iDb.delete(record);
+        break;
+      } catch (OConcurrentModificationException e) {
+        record.reload();
+      }
   }
 
   protected void delete(final OStorage iSt) {

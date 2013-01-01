@@ -19,10 +19,26 @@ package com.orientechnologies.orient.core.index;
 import static com.orientechnologies.orient.core.hook.ORecordHook.TYPE.BEFORE_CREATE;
 import static com.orientechnologies.orient.core.hook.ORecordHook.TYPE.BEFORE_UPDATE;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import com.orientechnologies.common.collection.OCompositeKey;
-import com.orientechnologies.orient.core.db.record.*;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.db.record.OMultiValueChangeEvent;
+import com.orientechnologies.orient.core.db.record.OMultiValueChangeTimeLine;
+import com.orientechnologies.orient.core.db.record.ORecordElement;
+import com.orientechnologies.orient.core.db.record.ORecordOperation;
+import com.orientechnologies.orient.core.db.record.OTrackedMultiValue;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.exception.OFastConcurrentModificationException;
 import com.orientechnologies.orient.core.exception.ORecordNotFoundException;
@@ -40,23 +56,37 @@ public class OClassIndexManager extends ODocumentHookAbstract {
 
   @Override
   public RESULT onRecordBeforeCreate(ODocument iDocument) {
-    iDocument = checkForLoading(iDocument);
+    checkIndexesAndAquireLock(iDocument, BEFORE_CREATE);
+    return RESULT.RECORD_NOT_CHANGED;
+  }
+
+  @Override
+  public RESULT onRecordBeforeReplicaAdd(ODocument iDocument) {
     checkIndexesAndAquireLock(iDocument, BEFORE_CREATE);
     return RESULT.RECORD_NOT_CHANGED;
   }
 
   @Override
   public void onRecordAfterCreate(ODocument iDocument) {
-    iDocument = checkForLoading(iDocument);
+    addIndexesEntriesAndReleaseLock(iDocument);
+  }
+
+  @Override
+  public void onRecordAfterReplicaAdd(ODocument iDocument) {
+    addIndexesEntriesAndReleaseLock(iDocument);
+  }
+
+  private void addIndexesEntriesAndReleaseLock(ODocument document) {
+    document = checkForLoading(document);
 
     // STORE THE RECORD IF NEW, OTHERWISE ITS RID
-    final OIdentifiable rid = iDocument.getIdentity().isPersistent() ? iDocument.placeholder() : iDocument;
+    final OIdentifiable rid = document.getIdentity().isPersistent() ? document.placeholder() : document;
 
-    final OClass cls = iDocument.getSchemaClass();
+    final OClass cls = document.getSchemaClass();
     if (cls != null) {
       final Collection<OIndex<?>> indexes = cls.getIndexes();
       for (final OIndex<?> index : indexes) {
-        final Object key = index.getDefinition().getDocumentValueToIndex(iDocument);
+        final Object key = index.getDefinition().getDocumentValueToIndex(document);
         // SAVE A COPY TO AVOID PROBLEM ON RECYCLING OF THE RECORD
         if (key instanceof Collection) {
           for (final Object keyItem : (Collection<?>) key)
@@ -66,12 +96,17 @@ public class OClassIndexManager extends ODocumentHookAbstract {
           index.put(key, rid);
       }
 
-      releaseModificationLock(iDocument, indexes);
+      releaseModificationLock(document, indexes);
     }
   }
 
   @Override
   public void onRecordCreateFailed(ODocument iDocument) {
+    releaseModificationLock(iDocument);
+  }
+
+  @Override
+  public void onRecordReplicaAddFailed(ODocument iDocument) {
     releaseModificationLock(iDocument);
   }
 
@@ -82,13 +117,27 @@ public class OClassIndexManager extends ODocumentHookAbstract {
 
   @Override
   public RESULT onRecordBeforeUpdate(ODocument iDocument) {
-    iDocument = checkForLoading(iDocument);
+    checkIndexesAndAquireLock(iDocument, BEFORE_UPDATE);
+    return RESULT.RECORD_NOT_CHANGED;
+  }
+
+  @Override
+  public RESULT onRecordBeforeReplicaUpdate(ODocument iDocument) {
     checkIndexesAndAquireLock(iDocument, BEFORE_UPDATE);
     return RESULT.RECORD_NOT_CHANGED;
   }
 
   @Override
   public void onRecordAfterUpdate(ODocument iDocument) {
+    updateIndexEntries(iDocument);
+  }
+
+  @Override
+  public void onRecordAfterReplicaUpdate(ODocument iDocument) {
+    updateIndexEntries(iDocument);
+  }
+
+  private void updateIndexEntries(ODocument iDocument) {
     iDocument = checkForLoading(iDocument);
 
     final OClass cls = iDocument.getSchemaClass();
@@ -129,6 +178,11 @@ public class OClassIndexManager extends ODocumentHookAbstract {
   }
 
   @Override
+  public void onRecordReplicaUpdateFailed(ODocument iDocument) {
+    releaseModificationLock(iDocument);
+  }
+
+  @Override
   public RESULT onRecordBeforeDelete(final ODocument iDocument) {
     final ORecordVersion version = iDocument.getRecordVersion(); // Cache the transaction-provided value
     if (iDocument.fields() == 0) {
@@ -147,7 +201,23 @@ public class OClassIndexManager extends ODocumentHookAbstract {
   }
 
   @Override
+  public RESULT onRecordBeforeReplicaDelete(ODocument iDocument) {
+    checkForLoading(iDocument);
+    acquireModificationLock(iDocument, iDocument.getSchemaClass() != null ? iDocument.getSchemaClass().getIndexes() : null);
+    return RESULT.RECORD_NOT_CHANGED;
+  }
+
+  @Override
   public void onRecordAfterDelete(final ODocument iDocument) {
+    deleteIndexEntries(iDocument);
+  }
+
+  @Override
+  public void onRecordAfterReplicaDelete(ODocument iDocument) {
+    deleteIndexEntries(iDocument);
+  }
+
+  private void deleteIndexEntries(ODocument iDocument) {
     final OClass cls = iDocument.getSchemaClass();
     if (cls == null)
       return;
@@ -197,6 +267,11 @@ public class OClassIndexManager extends ODocumentHookAbstract {
 
   @Override
   public void onRecordDeleteReplicated(ODocument iDocument) {
+    releaseModificationLock(iDocument);
+  }
+
+  @Override
+  public void onRecordReplicaDeleteFailed(ODocument iDocument) {
     releaseModificationLock(iDocument);
   }
 
@@ -419,21 +494,23 @@ public class OClassIndexManager extends ODocumentHookAbstract {
     return false;
   }
 
-  private void checkIndexesAndAquireLock(ODocument iRecord, TYPE hookType) {
-    final OClass cls = iRecord.getSchemaClass();
+  private void checkIndexesAndAquireLock(ODocument document, TYPE hookType) {
+    document = checkForLoading(document);
+
+    final OClass cls = document.getSchemaClass();
     if (cls != null) {
       final Collection<OIndex<?>> indexes = cls.getIndexes();
       switch (hookType) {
       case BEFORE_CREATE:
-        checkIndexedPropertiesOnCreation(iRecord, indexes);
+        checkIndexedPropertiesOnCreation(document, indexes);
         break;
       case BEFORE_UPDATE:
-        checkIndexedPropertiesOnUpdate(iRecord, indexes);
+        checkIndexedPropertiesOnUpdate(document, indexes);
         break;
       default:
         throw new IllegalArgumentException("Invalid hook type: " + hookType);
       }
-      acquireModificationLock(iRecord, indexes);
+      acquireModificationLock(document, indexes);
     }
   }
 

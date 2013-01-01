@@ -166,7 +166,7 @@ public abstract class OIndexMVRBTreeAbstract<T> extends OSharedResourceAdaptiveE
     return this;
   }
 
-  public OIndexInternal<T> loadFromConfiguration(final ODocument iConfig) {
+  public boolean loadFromConfiguration(final ODocument iConfig) {
     acquireExclusiveLock();
     try {
 
@@ -241,13 +241,20 @@ public abstract class OIndexMVRBTreeAbstract<T> extends OSharedResourceAdaptiveE
             // AUTOMATIC REBUILD IT
             OLogManager.instance().warn(this, "Cannot load index '%s' from storage (rid=%s): rebuilt it from scratch", getName(),
                 rid);
-          rebuild();
+          try {
+            rebuild();
+          } catch (Throwable t) {
+            OLogManager.instance().error(this,
+                "Cannot rebuild index '%s' from storage (rid=%s). The index will be removed in configuration", getName(), rid);
+            // REMOVE IT
+            return false;
+          }
         }
       }
 
       installHooks(iConfig.getDatabase());
 
-      return this;
+      return true;
 
     } finally {
       releaseExclusiveLock();

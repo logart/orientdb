@@ -1,3 +1,5 @@
+## OrientDB
+
 [<img src="http://www.orientdb.org/images/graphed-tutorial-graph_small.png">](http://studio.nuvolabase.com/db/free/demo/GratefulDeadConcerts/studio/?user=reader&passthrough=false&database=/db/free/demo/GratefulDeadConcerts&password=reader)
 
 ## What is Orient?
@@ -41,12 +43,12 @@ OrientDB is free for any use (Apache 2 license). If you are in production don't 
 ## Online cloud service
 
 <table>
-  <tr><td>[<img src="http://www.nuvolabase.com/site/images/nuvola_small.png">](http://www.nuvolabase.com)
-  </td><td>OrientDB is available on the cloud through [NuvolaBase.com](http://www.nuvolabase.com). FREE accounts are available for small sized databases.</td></tr>
+  <tr><td><a href="http://www.nuvolabase.com"><img src="http://www.nuvolabase.com/site/images/nuvola_small.png"></a>
+  </td><td>OrientDB is available on the cloud through <a href="http://www.nuvolabase.com">NuvolaBase.com</a>. FREE accounts are available for small sized databases.</td></tr>
 </table>
 
 ## Know more
 
-Start to learn OrientDB from the [WiKi Main page](https://github.com/nuvolabase/orientdb/wiki). For any question visit the [OrientDB User Group](http://groups.google.com/group/orient-database). Need help? Go to the [Online support](http://chat.stackoverflow.com/rooms/6625/orientdb). Do you want to hear about OrientDB in a conference? Take a look at the [[Events|Events page]].
+Start to learn OrientDB from the [WiKi Main page](https://github.com/nuvolabase/orientdb/wiki). For any question visit the [OrientDB Community Group](http://www.orientdb.org/community-group.htm). Need help? Go to the [Online support](http://chat.stackoverflow.com/rooms/6625/orientdb). Do you want to hear about OrientDB in a conference? Take a look at the [[Events]] page.
 
-[http://mac.softpedia.com/base_img/softpedia_free_award_f.gif](http://mac.softpedia.com/get/Developer-Tools/Orient.shtml)
+[![](http://mac.softpedia.com/base_img/softpedia_free_award_f.gif)](http://mac.softpedia.com/get/Developer-Tools/Orient.shtml)
