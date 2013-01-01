@@ -45,7 +45,7 @@ import com.orientechnologies.orient.core.storage.impl.local.OClusterLocal;
 import com.orientechnologies.orient.core.storage.impl.local.ODataLocal;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageLocal;
 import com.orientechnologies.orient.core.storage.impl.local.OTxSegment;
-import com.orientechnologies.orient.server.db.OSharedDocumentDatabase;
+import com.orientechnologies.orient.server.db.OSharedGraphDatabase;
 import com.orientechnologies.orient.server.network.protocol.http.OHttpRequest;
 import com.orientechnologies.orient.server.network.protocol.http.OHttpResponse;
 import com.orientechnologies.orient.server.network.protocol.http.OHttpUtils;
@@ -83,7 +83,7 @@ public class OServerCommandGetConnect extends OServerCommandAuthenticatedDbAbstr
     ODatabaseDocumentTx db = null;
     try {
       if (urlParts.length > 2) {
-        db = OSharedDocumentDatabase.acquire(urlParts[1], urlParts[2], urlParts[3]);
+        db = OSharedGraphDatabase.acquire(urlParts[1], urlParts[2], urlParts[3]);
       } else
         db = getProfiledDatabaseInstance(iRequest);
 

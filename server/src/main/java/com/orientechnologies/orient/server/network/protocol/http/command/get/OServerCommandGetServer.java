@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import com.orientechnologies.common.concur.resource.OResourcePool;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
 import com.orientechnologies.orient.core.serialization.serializer.OJSONWriter;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageLocal;
@@ -35,7 +36,7 @@ import com.orientechnologies.orient.server.OClientConnection;
 import com.orientechnologies.orient.server.OClientConnectionManager;
 import com.orientechnologies.orient.server.OServerMain;
 import com.orientechnologies.orient.server.config.OServerEntryConfiguration;
-import com.orientechnologies.orient.server.db.OSharedDocumentDatabase;
+import com.orientechnologies.orient.server.db.OSharedGraphDatabase;
 import com.orientechnologies.orient.server.network.protocol.ONetworkProtocolData;
 import com.orientechnologies.orient.server.network.protocol.http.OHttpRequest;
 import com.orientechnologies.orient.server.network.protocol.http.OHttpResponse;
@@ -108,8 +109,8 @@ public class OServerCommandGetServer extends OServerCommandAuthenticatedServerAb
       json.endCollection(1, false);
 
       json.beginCollection(1, true, "dbs");
-      Map<String, OResourcePool<String, ODatabaseDocumentTx>> dbPool = OSharedDocumentDatabase.getDatabasePools();
-      for (Entry<String, OResourcePool<String, ODatabaseDocumentTx>> entry : dbPool.entrySet()) {
+      Map<String, OResourcePool<String, OGraphDatabase>> dbPool = OSharedGraphDatabase.getDatabasePools();
+      for (Entry<String, OResourcePool<String, OGraphDatabase>> entry : dbPool.entrySet()) {
         for (ODatabaseDocumentTx db : entry.getValue().getResources()) {
 
           json.beginObject(2);

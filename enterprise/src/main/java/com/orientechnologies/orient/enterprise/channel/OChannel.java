@@ -83,6 +83,7 @@ public abstract class OChannel extends OSharedResourceExternalTimeout {
   }
 
   public void flush() throws IOException {
+    updateMetricFlushes();
     outStream.flush();
   }
 

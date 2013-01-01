@@ -69,4 +69,10 @@ public class OChannelText extends OChannel {
     updateMetricTransmittedBytes(iContent.length);
     return this;
   }
+
+  public OChannelText writeByte(final byte iContent) throws IOException {
+    outStream.write(iContent);
+    updateMetricTransmittedBytes(1);
+    return this;
+  }
 }

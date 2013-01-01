@@ -58,7 +58,8 @@ public class OClientConnectionManager extends OSharedResourceAbstract {
         try {
           final HashMap<Integer, OClientConnection> localConnections = new HashMap<Integer, OClientConnection>(connections);
           for (Entry<Integer, OClientConnection> entry : localConnections.entrySet()) {
-            final Socket socket = entry.getValue().protocol.getChannel().socket;
+            final Socket socket = entry.getValue().protocol != null && entry.getValue().protocol.getChannel() != null ? entry.getValue().protocol.getChannel().socket
+                : null;
             if (socket == null || socket.isClosed() || socket.isInputShutdown()) {
               OLogManager.instance().debug(this, "[OClientConnectionManager] found and removed pending closed channel %d (%s)",
                   entry.getKey(), socket);

@@ -22,7 +22,12 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import com.orientechnologies.common.concur.OTimeoutException;
 import com.orientechnologies.common.exception.OException;
@@ -407,10 +412,8 @@ public abstract class OChannelBinary extends OChannel {
     if (debug)
       OLogManager.instance().debug(this, "%s - Flush", socket.getRemoteSocketAddress());
 
-    updateMetricFlushes();
-
-    super.flush();
     out.flush();
+    super.flush();
   }
 
   @Override

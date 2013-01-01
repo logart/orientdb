@@ -41,14 +41,14 @@ import com.orientechnologies.orient.core.config.OContextConfiguration;
 
 public class OChannelBinaryServer extends OChannelBinary {
 
-	public OChannelBinaryServer(final Socket iSocket, final OContextConfiguration iConfig) throws IOException {
-		super(iSocket, iConfig);
+  public OChannelBinaryServer(final Socket iSocket, final OContextConfiguration iConfig) throws IOException {
+    super(iSocket, iConfig);
 
-		inStream = new BufferedInputStream(socket.getInputStream(), socketBufferSize);
-		outStream = new BufferedOutputStream(socket.getOutputStream(), socketBufferSize);
+    inStream = new BufferedInputStream(socket.getInputStream(), socketBufferSize);
+    outStream = new BufferedOutputStream(socket.getOutputStream(), socketBufferSize);
 
-		out = new DataOutputStream(outStream);
-		in = new DataInputStream(inStream);
-		connected();
-	}
+    out = new DataOutputStream(outStream);
+    in = new DataInputStream(inStream);
+    connected();
+  }
 }

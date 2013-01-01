@@ -73,6 +73,7 @@ public abstract class ONetworkProtocolHttpAbstract extends ONetworkProtocol {
   @Override
   public void config(final OServer iServer, final Socket iSocket, final OContextConfiguration iConfiguration,
       final Object[] commands) throws IOException {
+
     final String addHeaders = iConfiguration.getValueAsString("network.http.additionalResponseHeaders", null);
     if (addHeaders != null)
       additionalResponseHeaders = addHeaders.split(";");
@@ -108,7 +109,7 @@ public abstract class ONetworkProtocolHttpAbstract extends ONetworkProtocol {
     else
       callbackF = null;
 
-    response = new OHttpResponse(channel.outStream, request.httpVersion, additionalResponseHeaders, responseCharSet,
+    response = new OHttpResponse(channel, request.httpVersion, additionalResponseHeaders, responseCharSet,
         connection.data.serverInfo, request.sessionId, callbackF);
 
     final long begin = System.currentTimeMillis();

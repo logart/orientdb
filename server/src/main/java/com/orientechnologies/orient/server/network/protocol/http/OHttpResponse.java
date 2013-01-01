@@ -32,6 +32,7 @@ import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.OBinaryProtocol;
 import com.orientechnologies.orient.core.serialization.serializer.OJSONWriter;
+import com.orientechnologies.orient.enterprise.channel.text.OChannelText;
 
 /**
  * Maintains information about current HTTP response.
@@ -43,7 +44,7 @@ public class OHttpResponse {
   public static final String JSON_FORMAT   = "type,indent:2,rid,version,attribSameRow,class";
   public static final char[] URL_SEPARATOR = { '/' };
 
-  private final OutputStream out;
+  private final OChannelText channel;
   public final String        httpVersion;
   public String              headers;
   public String[]            additionalHeaders;
@@ -53,9 +54,9 @@ public class OHttpResponse {
   public String              sessionId;
   public String              callbackFunction;
 
-  public OHttpResponse(final OutputStream iOutStream, final String iHttpVersion, final String[] iAdditionalHeaders,
+  public OHttpResponse(final OChannelText iChannel, final String iHttpVersion, final String[] iAdditionalHeaders,
       final String iResponseCharSet, final String iServerInfo, final String iSessionId, final String iCallbackFunction) {
-    out = iOutStream;
+    channel = iChannel;
     httpVersion = iHttpVersion;
     additionalHeaders = iAdditionalHeaders;
     characterSet = iResponseCharSet;
@@ -105,8 +106,8 @@ public class OHttpResponse {
     writeLine(null);
 
     if (binaryContent != null)
-      out.write(binaryContent);
-    out.flush();
+      channel.writeBytes(binaryContent);
+    flush();
   }
 
   public void writeStatus(final int iStatus, final String iReason) throws IOException {
@@ -134,12 +135,12 @@ public class OHttpResponse {
 
   public void writeLine(final String iContent) throws IOException {
     writeContent(iContent);
-    out.write(OHttpUtils.EOL);
+    channel.writeBytes(OHttpUtils.EOL);
   }
 
   public void writeContent(final String iContent) throws IOException {
     if (iContent != null)
-      out.write(OBinaryProtocol.string2bytes(iContent));
+      channel.writeBytes(OBinaryProtocol.string2bytes(iContent));
   }
 
   public void writeResult(Object iResult) throws InterruptedException, IOException {
@@ -274,10 +275,10 @@ public class OHttpResponse {
     if (iContent != null) {
       int b;
       while ((b = iContent.read()) > -1)
-        out.write(b);
+        channel.writeByte((byte) b);
     }
 
-    out.flush();
+    flush();
   }
 
   /**
@@ -290,11 +291,11 @@ public class OHttpResponse {
   }
 
   public OutputStream getOutputStream() {
-    return out;
+    return channel.outStream;
   }
 
   public void flush() throws IOException {
-    out.flush();
+    channel.flush();
   }
 
   public String getContentType() {
