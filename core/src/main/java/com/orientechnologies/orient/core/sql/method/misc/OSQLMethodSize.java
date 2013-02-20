@@ -18,33 +18,41 @@ package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.ORecord;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodSize extends OAbstractSQLMethod {
+public class OSQLMethodSize extends OSQLMethod {
 
-    public static final String NAME = "size";
+  public static final String NAME = "size";
 
-    public OSQLMethodSize() {
-        super(NAME);
+  public OSQLMethodSize() {
+    super(NAME);
+  }
+
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    if (value != null) {
+      if (value instanceof ORecord<?>) {
+        value = 1;
+      } else {
+        value = OMultiValue.getSize(value);
+      }
+    } else {
+      value = 0;
     }
-
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        if (ioResult != null) {
-            if (ioResult instanceof ORecord<?>) {
-                ioResult = 1;
-            } else {
-                ioResult = OMultiValue.getSize(ioResult);
-            }
-        } else {
-            ioResult = 0;
-        }
-        return ioResult;
-    }
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodSize copy() {
+    final OSQLMethodSize method = new OSQLMethodSize();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

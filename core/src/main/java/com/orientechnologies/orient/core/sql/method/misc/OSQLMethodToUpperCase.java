@@ -17,24 +17,32 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodToUpperCase extends OAbstractSQLMethod {
+public class OSQLMethodToUpperCase extends OSQLMethod {
 
-    public static final String NAME = "touppercase";
+  public static final String NAME = "touppercase";
 
-    public OSQLMethodToUpperCase() {
-        super(NAME);
-    }
+  public OSQLMethodToUpperCase() {
+    super(NAME);
+  }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        ioResult = ioResult != null ? ioResult.toString().toUpperCase() : null;
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    value = value != null ? value.toString().toUpperCase() : null;
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodToUpperCase copy() {
+    final OSQLMethodToUpperCase method = new OSQLMethodToUpperCase();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

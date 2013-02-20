@@ -16,15 +16,12 @@
 package com.orientechnologies.orient.core.sql.functions.math;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+import com.orientechnologies.orient.core.sql.model.OExpression;
 
 /**
  * Compute the average value for a field. Uses the context to save the last average number. When different Number class are used,
@@ -33,33 +30,46 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionAverage extends OSQLFunctionMathAbstract {
+public class OSQLFunctionAverage extends OSQLFunctionAbstract {
   public static final String NAME  = "avg";
 
-  private Number             sum;
-  private int                total = 0;
+  private Number sum;
+  private int total = 0;
 
   public OSQLFunctionAverage() {
     super(NAME, 1, -1);
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters, OCommandContext iContext) {
-    if (iParameters.length == 1) {
-      if (iParameters[0] instanceof Number)
-        sum((Number) iParameters[0]);
-      else if (OMultiValue.isMultiValue(iParameters[0]))
-        for (Object n : OMultiValue.getMultiValueIterable(iParameters[0]))
+  @Override
+  public boolean isAgregation() {
+    //aggregation mode
+    return children.size() == 1;
+  }
+  
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    if (children.size() == 1) {
+      final Object val = children.get(0).evaluate(context, candidate);
+      
+      if (val instanceof Number) {
+        sum((Number)val);
+      } else if (OMultiValue.isMultiValue(val)) {
+        for (Object n : OMultiValue.getMultiValueIterable(val)) {
           sum((Number) n);
+        }
+      }
 
     } else {
       sum = null;
-      for (int i = 0; i < iParameters.length; ++i)
-        sum((Number) iParameters[i]);
+      for(OExpression  exp : children){
+        final Object val = exp.evaluate(context, candidate);
+        sum((Number)val);
+      }
     }
 
     return getResult();
   }
-
+  
   protected void sum(Number value) {
     if (value != null) {
       total++;
@@ -75,59 +85,30 @@ public class OSQLFunctionAverage extends OSQLFunctionMathAbstract {
     return "Syntax error: avg(<field> [,<field>*])";
   }
 
-  @Override
   public Object getResult() {
-    if (returnDistributedResult()) {
-      final Map<String, Object> doc = new HashMap<String, Object>();
-      doc.put("sum", sum);
-      doc.put("total", total);
-      return doc;
-    } else {
-      if (sum instanceof Integer)
-        return sum.intValue() / total;
-      else if (sum instanceof Long)
-        return sum.longValue() / total;
-      else if (sum instanceof Float)
-        return sum.floatValue() / total;
-      else if (sum instanceof Double)
-        return sum.doubleValue() / total;
-      else if (sum instanceof BigDecimal)
-        return ((BigDecimal) sum).divide(new BigDecimal(total));
-    }
-    return null;
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    Number sum = null;
-    int total = 0;
-    for (Object iParameter : resultsToMerge) {
-      final Map<String, Object> item = (Map<String, Object>) iParameter;
-      if (sum == null)
-        sum = (Number) item.get("sum");
-      else
-        sum = OType.increment(sum, (Number) item.get("sum"));
-
-      total += (Integer) item.get("total");
-    }
-
-    if (sum instanceof Integer)
+      if (sum instanceof Integer) {
       return sum.intValue() / total;
-    else if (sum instanceof Long)
+    } else if (sum instanceof Long) {
       return sum.longValue() / total;
-    else if (sum instanceof Float)
+    } else if (sum instanceof Float) {
       return sum.floatValue() / total;
-    else if (sum instanceof Double)
+    } else if (sum instanceof Double) {
       return sum.doubleValue() / total;
-    else if (sum instanceof BigDecimal)
+    } else if (sum instanceof BigDecimal) {
       return ((BigDecimal) sum).divide(new BigDecimal(total));
-
-    return null;
+    } else {
+      return null;
+    }
   }
-
+  
   @Override
-  public boolean aggregateResults() {
-    return configuredParameters.length == 1;
+  public OSQLFunctionAverage copy() {
+    final OSQLFunctionAverage fct = new OSQLFunctionAverage();
+    fct.setAlias(alias);
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
+
+  
+  
 }

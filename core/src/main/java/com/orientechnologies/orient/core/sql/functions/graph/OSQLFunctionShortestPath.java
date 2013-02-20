@@ -22,9 +22,6 @@ import com.orientechnologies.orient.core.db.graph.OGraphDatabase.DIRECTION;
 import com.orientechnologies.orient.core.db.record.ODatabaseRecord;
 import com.orientechnologies.orient.core.db.record.ODatabaseRecordTx;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.ORecordInternal;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.OSQLHelper;
 
 /**
  * Shortest path algorithm to find the shortest path from one node to another node in a directed graph.
@@ -41,19 +38,18 @@ public class OSQLFunctionShortestPath extends OSQLFunctionPathFinder<Integer> {
     super(NAME, 2, 3);
   }
 
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters, final OCommandContext iContext) {
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
     final ODatabaseRecord currentDatabase = ODatabaseRecordThreadLocal.INSTANCE.get();
     db = (OGraphDatabase) (currentDatabase instanceof OGraphDatabase ? currentDatabase : new OGraphDatabase(
         (ODatabaseRecordTx) currentDatabase));
 
-    final ORecordInternal<?> record = (ORecordInternal<?>) (iCurrentRecord != null ? iCurrentRecord.getRecord() : null);
-
-    paramSourceVertex = (OIdentifiable) OSQLHelper.getValue(iParameters[0], record, iContext);
-    paramDestinationVertex = (OIdentifiable) OSQLHelper.getValue(iParameters[1], record, iContext);
-    if (iParameters.length > 2)
-      paramDirection = DIRECTION.valueOf(iParameters[2].toString().toUpperCase());
-
-    return super.execute(iParameters, iContext);
+    paramSourceVertex = (OIdentifiable) children.get(0).evaluate(context, candidate);
+    paramDestinationVertex = (OIdentifiable)children.get(1).evaluate(context, candidate);
+    if (children.size() > 2){
+      paramDirection = DIRECTION.valueOf(children.get(2).evaluate(context, candidate).toString().toUpperCase());
+    }
+    return super.evaluate(context, candidate);
   }
 
   public String getSyntax() {
@@ -82,4 +78,13 @@ public class OSQLFunctionShortestPath extends OSQLFunctionPathFinder<Integer> {
   protected Integer sumDistances(final Integer iDistance1, final Integer iDistance2) {
     return iDistance1.intValue() + iDistance2.intValue();
   }
+
+  @Override
+  public OSQLFunctionShortestPath copy() {
+    final OSQLFunctionShortestPath fct = new OSQLFunctionShortestPath();
+    fct.setAlias(getAlias());
+    fct.getArguments().addAll(getArguments());
+    return fct;
+  }
+
 }

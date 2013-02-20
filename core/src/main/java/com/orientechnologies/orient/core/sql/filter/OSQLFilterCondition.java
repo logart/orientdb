@@ -37,8 +37,8 @@ import com.orientechnologies.orient.core.query.OQueryRuntimeValueMulti;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
 import com.orientechnologies.orient.core.sql.OSQLHelper;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunctionRuntime;
-import com.orientechnologies.orient.core.sql.operator.OQueryOperator;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
+import com.orientechnologies.orient.core.sql.operator.OSQLOperator;
 import com.orientechnologies.orient.core.sql.query.OSQLQuery;
 
 /**
@@ -50,15 +50,15 @@ import com.orientechnologies.orient.core.sql.query.OSQLQuery;
 public class OSQLFilterCondition {
   private static final String NULL_VALUE = "null";
   protected Object            left;
-  protected OQueryOperator    operator;
+  protected OSQLOperator    operator;
   protected Object            right;
 
-  public OSQLFilterCondition(final Object iLeft, final OQueryOperator iOperator) {
+  public OSQLFilterCondition(final Object iLeft, final OSQLOperator iOperator) {
     this.left = iLeft;
     this.operator = iOperator;
   }
 
-  public OSQLFilterCondition(final Object iLeft, final OQueryOperator iOperator, final Object iRight) {
+  public OSQLFilterCondition(final Object iLeft, final OSQLOperator iOperator, final Object iRight) {
     this.left = iLeft;
     this.operator = iOperator;
     this.right = iRight;
@@ -90,14 +90,8 @@ public class OSQLFilterCondition {
       return l;
     }
 
-    Object result;
-    try {
-      result = operator.evaluateRecord(iCurrentRecord, iCurrentResult, this, l, r, iContext);
-    } catch (Exception e) {
-      result = Boolean.FALSE;
-    }
-
-    return result;
+    throw new UnsupportedOperationException("TODO obsolete model api, to be removed.");
+    //return operator.evaluateRecord(iCurrentRecord, iCurrentResult, this, l, r, iContext);
   }
 
   public ORID getBeginRidRange() {
@@ -107,7 +101,8 @@ public class OSQLFilterCondition {
       else
         return null;
 
-    return operator.getBeginRidRange(left, right);
+    throw new UnsupportedOperationException("TODO obsolete model api, to be removed.");
+    //return operator.getBeginRidRange(left, right);
   }
 
   public ORID getEndRidRange() {
@@ -117,7 +112,8 @@ public class OSQLFilterCondition {
       else
         return null;
 
-    return operator.getEndRidRange(left, right);
+    throw new UnsupportedOperationException("TODO obsolete model api, to be removed.");
+    //return operator.getEndRidRange(left, right);
   }
 
   private Object[] checkForConversion(final OIdentifiable o, final Object l, final Object r) {
@@ -267,10 +263,10 @@ public class OSQLFilterCondition {
       // NESTED CONDITION: EVALUATE IT RECURSIVELY
       return ((OSQLFilterCondition) iValue).evaluate(iCurrentRecord, iCurrentResult, iContext);
 
-    if (iValue instanceof OSQLFunctionRuntime) {
+    if (iValue instanceof OSQLFunction) {
       // STATELESS FUNCTION: EXECUTE IT
-      final OSQLFunctionRuntime f = (OSQLFunctionRuntime) iValue;
-      return f.execute(iCurrentRecord, iCurrentResult, iContext);
+      final OSQLFunction f = (OSQLFunction) iValue;
+      return f.evaluate(iContext, iValue);
     }
 
     final Iterable<?> multiValue = OMultiValue.getMultiValueIterable(iValue);
@@ -321,7 +317,7 @@ public class OSQLFilterCondition {
     return right;
   }
 
-  public OQueryOperator getOperator() {
+  public OSQLOperator getOperator() {
     return operator;
   }
 

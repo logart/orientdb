@@ -17,26 +17,37 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
+import com.orientechnologies.orient.core.sql.model.OExpression;
+import java.util.List;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodRight extends OAbstractSQLMethod {
+public class OSQLMethodRight extends OSQLMethod {
 
-    public static final String NAME = "right";
+  public static final String NAME = "right";
 
-    public OSQLMethodRight() {
-        super(NAME, 1);
-    }
+  public OSQLMethodRight() {
+    super(NAME, 1);
+  }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        final int offset = Integer.parseInt(iMethodParams[0].toString());
-        ioResult = ioResult != null ? ioResult.toString().substring(
-                offset < ioResult.toString().length() ? ioResult.toString().length() - offset : 0) : null;
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    final List<OExpression> arguments = getMethodArguments();
+    Object value = getSource().evaluate(context, candidate);
+    final int offset = Integer.parseInt(arguments.get(0).evaluate(context, candidate).toString());
+    value = value != null ? value.toString().substring(
+            offset < value.toString().length() ? value.toString().length() - offset : 0) : null;
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodRight copy() {
+    final OSQLMethodRight method = new OSQLMethodRight();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

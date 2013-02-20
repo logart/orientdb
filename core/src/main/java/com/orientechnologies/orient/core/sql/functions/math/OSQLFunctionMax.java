@@ -15,11 +15,9 @@
  */
 package com.orientechnologies.orient.core.sql.functions.math;
 
-import java.util.List;
-
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+import com.orientechnologies.orient.core.sql.model.OExpression;
 
 /**
  * Compute the maximum value for a field. Uses the context to save the last maximum number. When different Number class are used,
@@ -28,45 +26,50 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionMax extends OSQLFunctionMathAbstract {
+public class OSQLFunctionMax extends OSQLFunctionAbstract {
   public static final String NAME = "max";
 
-  private Comparable<Object> context;
+  private Comparable<Object> max = null;
 
   public OSQLFunctionMax() {
     super(NAME, 1, -1);
   }
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters,
-      OCommandContext iContext) {
-    if (iParameters[0] == null || !(iParameters[0] instanceof Comparable<?>))
-      // PRECONDITIONS
-      return null;
+  @Override
+  public boolean isAgregation() {
+    //aggregation mode
+    return children.size() == 1;
+  }
+  
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    
+    if (getArguments().size() == 1) {
+      //group by case
+      final Comparable<Object> value = (Comparable<Object>)children.get(0).evaluate(context, candidate);
 
-    if (iParameters.length == 1) {
-      final Comparable<Object> value = (Comparable<Object>) iParameters[0];
-
-      if (context == null)
+      if (max == null){
         // FIRST TIME
-        context = value;
-      else if (context.compareTo(value) < 0)
+        max = value;
+      }else if (max.compareTo(value) < 0){
         // BIGGER
-        context = value;
+        max = value;
+      }
 
-      return null;
+      return max;
     } else {
-      Object max = null;
-      for (int i = 0; i < iParameters.length; ++i) {
-        if (max == null || iParameters[i] != null && ((Comparable) iParameters[i]).compareTo(max) > 0)
-          max = iParameters[i];
+      //max of several elements
+      Comparable<Object> max = null;
+      for(OExpression  ex : children){
+        final Comparable<Object> value = (Comparable<Object>) ex.evaluate(context, candidate);
+        if(max == null){
+          max = value;
+        }else if (max.compareTo(value) < 0){
+          max = value;
+        }
       }
       return max;
     }
-  }
-
-  public boolean aggregateResults() {
-    return configuredParameters.length == 1;
   }
 
   public String getSyntax() {
@@ -74,24 +77,11 @@ public class OSQLFunctionMax extends OSQLFunctionMathAbstract {
   }
 
   @Override
-  public Object getResult() {
-    return context;
+  public OSQLFunctionMax copy() {
+    final OSQLFunctionMax fct = new OSQLFunctionMax();
+    fct.setAlias(alias);
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    Comparable<Object> context = null;
-    for (Object iParameter : resultsToMerge) {
-      final Comparable<Object> value = (Comparable<Object>) iParameter;
-
-      if (context == null)
-        // FIRST TIME
-        context = value;
-      else if (context.compareTo(value) < 0)
-        // BIGGER
-        context = value;
-    }
-    return context;
-  }
 }

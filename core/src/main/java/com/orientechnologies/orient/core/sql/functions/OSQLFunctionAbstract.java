@@ -15,10 +15,11 @@
  */
 package com.orientechnologies.orient.core.sql.functions;
 
-import java.util.List;
-
-import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
-import com.orientechnologies.orient.core.storage.OAutoshardedStorage;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.sql.model.OSearchContext;
+import com.orientechnologies.orient.core.sql.model.OSearchResult;
+import com.orientechnologies.orient.core.sql.model.OSortBy;
+import java.math.BigDecimal;
 
 /**
  * Abstract class to extend to build Custom SQL Functions. Extend it and register it with:
@@ -28,65 +29,65 @@ import com.orientechnologies.orient.core.storage.OAutoshardedStorage;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public abstract class OSQLFunctionAbstract implements OSQLFunction {
-  protected String name;
-  protected int    minParams;
-  protected int    maxParams;
-
-  public OSQLFunctionAbstract(final String iName, final int iMinParams, final int iMaxParams) {
-    this.name = iName;
-    this.minParams = iMinParams;
-    this.maxParams = iMaxParams;
+public abstract class OSQLFunctionAbstract extends OSQLFunction {
+  
+  protected final String name;
+  protected final int minParams;
+  protected final int maxParams;
+  
+  public OSQLFunctionAbstract(String name){
+    this(name, 0);
+  }
+  
+  public OSQLFunctionAbstract(String name, int nbparams) {
+    this(name, nbparams, nbparams);
   }
 
+  public OSQLFunctionAbstract(String name, int minparams, int maxparams) {
+    this.name = name;
+    this.minParams = minparams;
+    this.maxParams = maxparams;
+  }
+  
+  @Override
   public String getName() {
     return name;
   }
 
+  @Override
   public int getMinParams() {
     return minParams;
   }
 
+  @Override
   public int getMaxParams() {
     return maxParams;
   }
 
   @Override
-  public String toString() {
-    return name + "()";
+  protected String thisToString() {
+    return "(Function) "+getName();
   }
+  
+  @Override
+  public int compareTo(OSQLFunction o) {
+    return this.getName().compareTo(o.getName());
+  }
+  
+  public static  Class<? extends Number> getClassWithMorePrecision(final Class<? extends Number> iClass1,
+			final Class<? extends Number> iClass2) {
+		if (iClass1 == iClass2)
+			return iClass1;
 
-  public void config(final Object[] iConfiguredParameters) {
-  }
+		if (iClass1 == Integer.class
+				&& (iClass2 == Long.class || iClass2 == Float.class || iClass2 == Double.class || iClass2 == BigDecimal.class))
+			return iClass2;
+		else if (iClass1 == Long.class && (iClass2 == Float.class || iClass2 == Double.class || iClass2 == BigDecimal.class))
+			return iClass2;
+		else if (iClass1 == Float.class && (iClass2 == Double.class || iClass2 == BigDecimal.class))
+			return iClass2;
 
-  public boolean aggregateResults() {
-    return false;
-  }
-
-  public boolean filterResult() {
-    return false;
-  }
-
-  public Object getResult() {
-    return null;
-  }
-
-  public void setResult(final Object iResult) {
-  }
-
-  public boolean shouldMergeDistributedResult() {
-    return false;
-  }
-
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    throw new IllegalStateException("By default SQL function execution result can not be merged");
-  }
-
-  protected boolean returnDistributedResult() {
-    return ODatabaseRecordThreadLocal.INSTANCE.get().getStorage() instanceof OAutoshardedStorage;
-  }
-
-  protected long getDistributedStorageId() {
-    return ((OAutoshardedStorage) ODatabaseRecordThreadLocal.INSTANCE.get().getStorage()).getStorageId();
-  }
+		return iClass1;
+	}
+  
 }

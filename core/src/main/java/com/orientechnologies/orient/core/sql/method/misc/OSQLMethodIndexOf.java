@@ -17,29 +17,41 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
+import com.orientechnologies.orient.core.sql.model.OExpression;
+import java.util.List;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodIndexOf extends OAbstractSQLMethod {
+public class OSQLMethodIndexOf extends OSQLMethod {
 
-    public static final String NAME = "indexof";
+  public static final String NAME = "indexof";
 
-    public OSQLMethodIndexOf() {
-        super(NAME, 1, 2);
+  public OSQLMethodIndexOf() {
+    super(NAME, 1, 2);
+  }
+
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    final List<OExpression> arguments = getMethodArguments();
+    Object value = getSource().evaluate(context, candidate);
+    final String param0 = arguments.get(0).evaluate(context, candidate).toString();
+    if (arguments.size() > 1) {
+      final Object param1 = arguments.get(1).evaluate(context, candidate);
+      String toFind = param0.substring(1, param0.length() - 1);
+      int startIndex = arguments.size() > 1 ? Integer.parseInt(param1.toString()) : 0;
+      value = value != null ? value.toString().indexOf(toFind, startIndex) : null;
     }
-
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        final String param0 = iMethodParams[0].toString();
-        if (param0.length() > 2) {
-            String toFind = param0.substring(1, param0.length() - 1);
-            int startIndex = iMethodParams.length > 1 ? Integer.parseInt(iMethodParams[1].toString()) : 0;
-            ioResult = ioResult != null ? ioResult.toString().indexOf(toFind, startIndex) : null;
-        }
-        return ioResult;
-    }
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodIndexOf copy() {
+    final OSQLMethodIndexOf method = new OSQLMethodIndexOf();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

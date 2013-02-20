@@ -22,13 +22,14 @@ import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.record.impl.ODocumentHelper;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodField extends OAbstractSQLMethod {
+public class OSQLMethodField extends OSQLMethod {
 
     public static final String NAME = "field";
 
@@ -36,28 +37,40 @@ public class OSQLMethodField extends OAbstractSQLMethod {
         super(NAME, 0, 1);
     }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        
-        if(ioResult instanceof String){
-            try {
-                ioResult = new ODocument(new ORecordId((String) ioResult));
-            }catch (Exception e){
-                OLogManager.instance().error(this, "Error on reading rid with value '%s'", null, ioResult);
-                ioResult = null;
-            }
-        }else if(ioResult instanceof OIdentifiable){
-            ioResult = ((OIdentifiable) ioResult).getRecord();
-        }
+//    @Override
+//    public Object evaluate(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
+//        
+//        if(ioResult instanceof String){
+//            try {
+//                ioResult = new ODocument(new ORecordId((String) ioResult));
+//            }catch (Exception e){
+//                OLogManager.instance().error(this, "Error on reading rid with value '%s'", null, ioResult);
+//                ioResult = null;
+//            }
+//        }else if(ioResult instanceof OIdentifiable){
+//            ioResult = ((OIdentifiable) ioResult).getRecord();
+//        }
+//
+//        if(ioResult != null){
+//            if(ioResult instanceof OCommandContext){
+//                ioResult = ((OCommandContext) ioResult).getVariable(iMethodParams[0].toString());
+//            }else{
+//                ioResult = ODocumentHelper.getFieldValue(ioResult, iMethodParams[0].toString());
+//            }
+//        }
+//        
+//        return ioResult;
+//    }
+    
+  @Override
+  public OSQLMethodField copy() {
+    final OSQLMethodField method = new OSQLMethodField();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 
-        if(ioResult != null){
-            if(ioResult instanceof OCommandContext){
-                ioResult = ((OCommandContext) ioResult).getVariable(iMethodParams[0].toString());
-            }else{
-                ioResult = ODocumentHelper.getFieldValue(ioResult, iMethodParams[0].toString());
-            }
-        }
-        
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

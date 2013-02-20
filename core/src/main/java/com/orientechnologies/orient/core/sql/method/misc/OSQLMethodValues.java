@@ -17,7 +17,7 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 import java.util.Map;
 
 /**
@@ -25,17 +25,25 @@ import java.util.Map;
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodValues extends OAbstractSQLMethod {
+public class OSQLMethodValues extends OSQLMethod {
 
-    public static final String NAME = "values";
+  public static final String NAME = "values";
 
-    public OSQLMethodValues() {
-        super(NAME);
-    }
+  public OSQLMethodValues() {
+    super(NAME);
+  }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        ioResult = ioResult != null && ioResult instanceof Map<?, ?> ? ((Map<?, ?>) ioResult).values() : null;
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    value = value != null && value instanceof Map<?, ?> ? ((Map<?, ?>) value).values() : null;
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodValues copy() {
+    final OSQLMethodValues method = new OSQLMethodValues();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

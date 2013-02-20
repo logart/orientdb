@@ -34,7 +34,6 @@ import com.orientechnologies.orient.core.sql.functions.geo.OSQLFunctionDistance;
 import com.orientechnologies.orient.core.sql.functions.graph.OSQLFunctionDijkstra;
 import com.orientechnologies.orient.core.sql.functions.graph.OSQLFunctionShortestPath;
 import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionAverage;
-import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionEval;
 import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionMax;
 import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionMin;
 import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionSum;
@@ -55,13 +54,13 @@ import com.orientechnologies.orient.core.sql.functions.misc.OSQLFunctionSysdate;
  */
 public final class ODefaultSQLFunctionFactory implements OSQLFunctionFactory {
 
-  private static final Map<String, Object> FUNCTIONS = new HashMap<String, Object>();
+  private static final Map<String, Class> FUNCTIONS = new HashMap<String, Class>();
   static {
     // MISC FUNCTIONS
-    FUNCTIONS.put(OSQLFunctionCoalesce.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionCoalesce());
-    FUNCTIONS.put(OSQLFunctionIf.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionIf());
-    FUNCTIONS.put(OSQLFunctionIfNull.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionIfNull());
-    FUNCTIONS.put(OSQLFunctionFormat.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionFormat());
+    FUNCTIONS.put(OSQLFunctionCoalesce.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionCoalesce.class);
+    FUNCTIONS.put(OSQLFunctionIf.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionIf.class);
+    FUNCTIONS.put(OSQLFunctionIfNull.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionIfNull.class);
+    FUNCTIONS.put(OSQLFunctionFormat.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionFormat.class);
     FUNCTIONS.put(OSQLFunctionDate.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionDate.class);
     FUNCTIONS.put(OSQLFunctionSysdate.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionSysdate.class);
     FUNCTIONS.put(OSQLFunctionCount.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionCount.class);
@@ -74,33 +73,37 @@ public final class ODefaultSQLFunctionFactory implements OSQLFunctionFactory {
     FUNCTIONS.put(OSQLFunctionList.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionList.class);
     FUNCTIONS.put(OSQLFunctionSet.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionSet.class);
     FUNCTIONS.put(OSQLFunctionMap.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionMap.class);
-    FUNCTIONS.put(OSQLFunctionEncode.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionEncode());
-    FUNCTIONS.put(OSQLFunctionDecode.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionDecode());
+    FUNCTIONS.put(OSQLFunctionEncode.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionEncode.class);
+    FUNCTIONS.put(OSQLFunctionDecode.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionDecode.class);
 
     // MATH FUNCTIONS
     FUNCTIONS.put(OSQLFunctionMin.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionMin.class);
     FUNCTIONS.put(OSQLFunctionMax.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionMax.class);
     FUNCTIONS.put(OSQLFunctionSum.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionSum.class);
     FUNCTIONS.put(OSQLFunctionAverage.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionAverage.class);
-    FUNCTIONS.put(OSQLFunctionEval.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionEval.class);
 
     // GEO FUNCTIONS
-    FUNCTIONS.put(OSQLFunctionDistance.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionDistance());
+    FUNCTIONS.put(OSQLFunctionDistance.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionDistance.class);
 
     // GRAPH FUNCTIONS
-    FUNCTIONS.put(OSQLFunctionDijkstra.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionDijkstra());
-    FUNCTIONS.put(OSQLFunctionShortestPath.NAME.toUpperCase(Locale.ENGLISH), new OSQLFunctionShortestPath());
+    FUNCTIONS.put(OSQLFunctionDijkstra.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionDijkstra.class);
+    FUNCTIONS.put(OSQLFunctionShortestPath.NAME.toUpperCase(Locale.ENGLISH), OSQLFunctionShortestPath.class);
   }
 
+  @Override
   public Set<String> getFunctionNames() {
     return FUNCTIONS.keySet();
   }
 
-  public boolean hasFunction(final String name) {
+  @Override
+  public boolean hasFunction(String name) {
+    name = name.toUpperCase(Locale.ENGLISH);
     return FUNCTIONS.containsKey(name);
   }
 
-  public OSQLFunction createFunction(final String name) {
+  @Override
+  public OSQLFunction createFunction(String name) {
+    name = name.toUpperCase(Locale.ENGLISH);
     final Object obj = FUNCTIONS.get(name);
 
     if (obj == null)

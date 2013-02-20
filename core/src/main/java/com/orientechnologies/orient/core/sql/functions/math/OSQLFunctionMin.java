@@ -15,11 +15,9 @@
  */
 package com.orientechnologies.orient.core.sql.functions.math;
 
-import java.util.List;
-
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+import com.orientechnologies.orient.core.sql.model.OExpression;
 
 /**
  * Compute the minimum value for a field. Uses the context to save the last minimum number. When different Number class are used,
@@ -28,70 +26,62 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionMin extends OSQLFunctionMathAbstract {
+public class OSQLFunctionMin extends OSQLFunctionAbstract {
   public static final String NAME = "min";
 
-  private Comparable<Object> context;
+  private Comparable<Object> min;
 
   public OSQLFunctionMin() {
     super(NAME, 1, -1);
   }
+  
+  @Override
+  public boolean isAgregation() {
+    //aggregation mode
+    return children.size() == 1;
+  }
+  
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    
+    if (getArguments().size() == 1) {
+      //group by case
+      final Comparable<Object> value = (Comparable<Object>)children.get(0).evaluate(context, candidate);
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters,
-      OCommandContext iContext) {
-    if (iParameters[0] == null || !(iParameters[0] instanceof Comparable<?>))
-      // PRECONDITIONS
-      return null;
-
-    if (iParameters.length == 1) {
-      final Comparable<Object> value = (Comparable<Object>) iParameters[0];
-
-      if (context == null)
+      if (min == null){
         // FIRST TIME
-        context = value;
-      else if (context.compareTo(value) > 0)
-        // BIGGER
-        context = value;
+        min = value;
+      }else if (min.compareTo(value) > 0){
+        // SMALLER
+        min = value;
+      }
 
-      return null;
+      return min;
     } else {
-      Object min = null;
-      for (int i = 0; i < iParameters.length; ++i) {
-        if (min == null || iParameters[i] != null && ((Comparable) iParameters[i]).compareTo(min) < 0)
-          min = iParameters[i];
+      //max of several elements
+      Comparable<Object> min = null;
+      for(OExpression  ex : children){
+        final Comparable<Object> value = (Comparable<Object>) ex.evaluate(context, candidate);
+        if(min == null){
+          min = value;
+        }else if (min.compareTo(value) > 0){
+          min = value;
+        }
       }
       return min;
     }
   }
-
-  public boolean aggregateResults() {
-    return configuredParameters.length == 1;
-  }
-
+  
   public String getSyntax() {
     return "Syntax error: min(<field> [,<field>*])";
   }
 
   @Override
-  public Object getResult() {
-    return context;
+  public OSQLFunctionMin copy() {
+    final OSQLFunctionMin fct = new OSQLFunctionMin();
+    fct.setAlias(alias);
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    Comparable<Object> context = null;
-    for (Object iParameter : resultsToMerge) {
-      final Comparable<Object> value = (Comparable<Object>) iParameter;
-
-      if (context == null)
-        // FIRST TIME
-        context = value;
-      else if (context.compareTo(value) > 0)
-        // BIGGER
-        context = value;
-    }
-    return context;
-  }
+  
 }

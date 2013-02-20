@@ -17,10 +17,7 @@ package com.orientechnologies.orient.core.sql.functions.coll;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItem;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunctionConfigurableAbstract;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
 
 /**
  * Extract the last item of multi values (arrays, collections and maps) or return the same value for non multi-value types.
@@ -28,44 +25,36 @@ import com.orientechnologies.orient.core.sql.functions.OSQLFunctionConfigurableA
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionLast extends OSQLFunctionConfigurableAbstract {
+public class OSQLFunctionLast extends OSQLFunctionAbstract {
   public static final String NAME = "last";
-  private Object             last;
+  private Object last;
 
   public OSQLFunctionLast() {
     super(NAME, 1, 1);
   }
 
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters,
-      final OCommandContext iContext) {
-    Object value = iParameters[0];
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = children.get(0).evaluate(context, candidate);
 
-    if (value instanceof OSQLFilterItem)
-      value = ((OSQLFilterItem) value).getValue(iCurrentRecord, iContext);
-
-    if (OMultiValue.isMultiValue(value))
+    if (OMultiValue.isMultiValue(value)){
       value = OMultiValue.getLastValue(value);
+    }
 
     last = value;
-
     return value;
-  }
-
-  public boolean aggregateResults() {
-    return configuredParameters.length == 1;
-  }
-
-  @Override
-  public Object getResult() {
-    return last;
-  }
-
-  @Override
-  public boolean filterResult() {
-    return true;
   }
 
   public String getSyntax() {
     return "Syntax error: last(<field>)";
   }
+
+  @Override
+  public OSQLFunctionLast copy() {
+    final OSQLFunctionLast fct = new OSQLFunctionLast();
+    fct.setAlias(getAlias());
+    fct.getArguments().addAll(getArguments());
+    return fct;
+  }
+
 }

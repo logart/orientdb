@@ -17,7 +17,7 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 import java.util.Date;
 
 /**
@@ -25,23 +25,31 @@ import java.util.Date;
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodAsLong extends OAbstractSQLMethod {
+public class OSQLMethodAsLong extends OSQLMethod {
 
-    public static final String NAME = "aslong";
+  public static final String NAME = "aslong";
 
-    public OSQLMethodAsLong() {
-        super(NAME);
+  public OSQLMethodAsLong() {
+    super(NAME);
+  }
+
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    if (value instanceof Number) {
+      value = ((Number) value).longValue();
+    } else if (value instanceof Date) {
+      value = ((Date) value).getTime();
+    } else {
+      value = value != null ? new Long(value.toString().trim()) : null;
     }
-
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        if (ioResult instanceof Number) {
-            ioResult = ((Number) ioResult).longValue();
-        } else if (ioResult instanceof Date) {
-            ioResult = ((Date) ioResult).getTime();
-        } else {
-            ioResult = ioResult != null ? new Long(ioResult.toString().trim()) : null;
-        }
-        return ioResult;
-    }
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodAsLong copy() {
+    final OSQLMethodAsLong method = new OSQLMethodAsLong();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

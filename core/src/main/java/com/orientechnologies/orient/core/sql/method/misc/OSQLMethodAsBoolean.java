@@ -17,38 +17,46 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodAsBoolean extends OAbstractSQLMethod {
+public class OSQLMethodAsBoolean extends OSQLMethod {
 
-    public static final String NAME = "asboolean";
+  public static final String NAME = "asboolean";
 
-    public OSQLMethodAsBoolean() {
-        super(NAME);
-    }
+  public OSQLMethodAsBoolean() {
+    super(NAME);
+  }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        if (ioResult != null) {
-            if (ioResult instanceof String) {
-                ioResult = Boolean.valueOf(((String) ioResult).trim());
-            } else if (ioResult instanceof Number) {
-                final int bValue = ((Number) ioResult).intValue();
-                if (bValue == 0) {
-                    ioResult = Boolean.FALSE;
-                } else if (bValue == 1) {
-                    ioResult = Boolean.TRUE;
-                } else {
-                    // IGNORE OTHER VALUES
-                    ioResult = null;
-                }
-            }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    if (value != null) {
+      if (value instanceof String) {
+        value = Boolean.valueOf(((String) value).trim());
+      } else if (value instanceof Number) {
+        final int bValue = ((Number) value).intValue();
+        if (bValue == 0) {
+          value = Boolean.FALSE;
+        } else if (bValue == 1) {
+          value = Boolean.TRUE;
+        } else {
+          // IGNORE OTHER VALUES
+          value = null;
         }
-        return ioResult;
+      }
     }
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodAsBoolean copy() {
+    final OSQLMethodAsBoolean method = new OSQLMethodAsBoolean();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

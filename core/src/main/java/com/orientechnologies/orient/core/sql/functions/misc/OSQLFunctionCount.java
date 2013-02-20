@@ -15,12 +15,8 @@
  */
 package com.orientechnologies.orient.core.sql.functions.misc;
 
-import java.util.List;
-
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionMathAbstract;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
 
 /**
  * Count the record that contains a field. Use * to indicate the record instead of the field. Uses the context to save the counter
@@ -29,47 +25,37 @@ import com.orientechnologies.orient.core.sql.functions.math.OSQLFunctionMathAbst
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionCount extends OSQLFunctionMathAbstract {
+public class OSQLFunctionCount extends OSQLFunctionAbstract {
   public static final String NAME  = "count";
 
-  private long               total = 0;
+  private long total = 0;
 
   public OSQLFunctionCount() {
     super(NAME, 1, 1);
   }
 
-  public Object execute(OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters, OCommandContext iContext) {
-    if (iParameters[0] != null)
-      total++;
-
-    return total;
-  }
-
-  public boolean aggregateResults() {
+  @Override
+  public boolean isAgregation() {
     return true;
   }
 
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    total++;
+    return total;
+  }
+  
+  @Override
   public String getSyntax() {
     return "Syntax error: count(<field>|*)";
   }
-
+  
   @Override
-  public Object getResult() {
-    return total;
+  public OSQLFunctionCount copy() {
+    final OSQLFunctionCount fct = new OSQLFunctionCount();
+    fct.setAlias(alias);
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
 
-  @Override
-  public void setResult(final Object iResult) {
-    total = ((Number) iResult).longValue();
-  }
-
-  @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    long total = 0;
-    for (Object iParameter : resultsToMerge) {
-      final long value = (Long) iParameter;
-      total += value;
-    }
-    return total;
-  }
 }

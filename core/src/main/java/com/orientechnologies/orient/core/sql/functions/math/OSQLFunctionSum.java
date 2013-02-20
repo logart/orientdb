@@ -15,13 +15,9 @@
  */
 package com.orientechnologies.orient.core.sql.functions.math;
 
-import java.util.List;
-
-import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.metadata.schema.OType;
-import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+import com.orientechnologies.orient.core.sql.model.OExpression;
 
 /**
  * Computes the sum of field. Uses the context to save the last sum number. When different Number class are used, take the class
@@ -30,69 +26,60 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionSum extends OSQLFunctionMathAbstract {
+public class OSQLFunctionSum extends OSQLFunctionAbstract {
   public static final String NAME = "sum";
 
-  private Number             sum;
+  private Number sum;
 
   public OSQLFunctionSum() {
     super(NAME, 1, -1);
   }
 
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters,
-      OCommandContext iContext) {
-    if (iParameters.length == 1) {
-      if (iParameters[0] instanceof Number)
-        sum((Number) iParameters[0]);
-      else if (OMultiValue.isMultiValue(iParameters[0]))
-        for (Object n : OMultiValue.getMultiValueIterable(iParameters[0]))
-          sum((Number) n);
-    } else {
-      sum = null;
-      for (int i = 0; i < iParameters.length; ++i)
-        sum((Number) iParameters[i]);
-    }
-    return sum;
-  }
-
-  protected void sum(final Number value) {
-    if (value != null) {
-      if (sum == null)
-        // FIRST TIME
-        sum = value;
-      else
-        sum = OType.increment(sum, value);
-    }
-  }
-
   @Override
-  public boolean aggregateResults() {
-    return configuredParameters.length == 1;
+  public boolean isAgregation() {
+    //aggregation mode
+    return children.size() == 1;
   }
+  
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    
+    if (getArguments().size() == 1) {
+      //group by case
+      final Number value = (Number)children.get(0).evaluate(context, candidate);
 
+      if (sum == null){
+        sum = value;
+      }else{
+        sum = value.doubleValue() + sum.doubleValue();
+      }
+
+      return sum;
+    } else {
+      //sum of several elements
+      Number sum = null;
+      for(OExpression  ex : children){
+        final Number value = (Number) ex.evaluate(context, candidate);
+        if(sum == null){
+          sum = value;
+        }else{
+          sum = value.doubleValue() + sum.doubleValue();
+        }
+      }
+      return sum;
+    }
+  }
+  
   public String getSyntax() {
     return "Syntax error: sum(<field> [,<field>*])";
   }
 
   @Override
-  public Object getResult() {
-    return sum;
+  public OSQLFunctionSum copy() {
+    final OSQLFunctionSum fct = new OSQLFunctionSum();
+    fct.setAlias(alias);
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
-
-  @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    Number sum = null;
-    for (Object iParameter : resultsToMerge) {
-      final Number value = (Number) iParameter;
-
-      if (value != null) {
-        if (sum == null)
-          // FIRST TIME
-          sum = value;
-        else
-          sum = OType.increment(sum, value);
-      }
-    }
-    return sum;
-  }
+  
 }

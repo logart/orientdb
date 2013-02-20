@@ -17,25 +17,33 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodCharAt extends OAbstractSQLMethod {
+public class OSQLMethodCharAt extends OSQLMethod {
 
-    public static final String NAME = "charat";
+  public static final String NAME = "charat";
 
-    public OSQLMethodCharAt() {
-        super(NAME, 1);
-    }
+  public OSQLMethodCharAt() {
+    super(NAME, 1);
+  }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        int index = Integer.parseInt(iMethodParams[0].toString());
-        ioResult = ioResult != null ? ioResult.toString().substring(index, index + 1) : null;
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    int index = Integer.parseInt(getMethodArguments().get(0).evaluate(context, candidate).toString());
+    value = value != null ? value.toString().substring(index, index + 1) : null;
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodCharAt copy() {
+    final OSQLMethodCharAt method = new OSQLMethodCharAt();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
 }

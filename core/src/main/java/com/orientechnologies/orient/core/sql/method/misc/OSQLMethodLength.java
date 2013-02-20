@@ -17,14 +17,14 @@
 package com.orientechnologies.orient.core.sql.method.misc;
 
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.method.OSQLMethod;
 
 /**
  *
  * @author Johann Sorel (Geomatys)
  * @author Luca Garulli
  */
-public class OSQLMethodLength extends OAbstractSQLMethod {
+public class OSQLMethodLength extends OSQLMethod {
 
     public static final String NAME = "length";
 
@@ -32,9 +32,18 @@ public class OSQLMethodLength extends OAbstractSQLMethod {
         super(NAME);
     }
 
-    @Override
-    public Object execute(OIdentifiable iCurrentRecord, OCommandContext iContext, Object ioResult, Object[] iMethodParams) {
-        ioResult = ioResult != null ? ioResult.toString().length() : 0;
-        return ioResult;
-    }
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    Object value = getSource().evaluate(context, candidate);
+    value = value != null ? value.toString().length() : 0;
+    return value;
+  }
+  
+  @Override
+  public OSQLMethodLength copy() {
+    final OSQLMethodLength method = new OSQLMethodLength();
+    method.getArguments().addAll(getArguments());
+    return method;
+  }
+  
 }

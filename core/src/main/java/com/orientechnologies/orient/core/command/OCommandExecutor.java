@@ -18,6 +18,7 @@ package com.orientechnologies.orient.core.command;
 import java.util.Map;
 
 import com.orientechnologies.common.listener.OProgressListener;
+import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
 
 /**
  * Generic GOF command pattern implementation.
@@ -27,7 +28,7 @@ import com.orientechnologies.common.listener.OProgressListener;
  * @param <T>
  */
 public interface OCommandExecutor {
-
+  
   /**
    * Parse the request. Once parsed the command can be executed multiple times by using the execute() method.
    * 
@@ -39,7 +40,7 @@ public interface OCommandExecutor {
    * @see #execute(Object...)
    * @return
    */
-  public <RET extends OCommandExecutor> RET parse(OCommandRequest iRequest);
+  public <RET extends OCommandExecutor> RET parse(OCommandRequest iRequest) throws OCommandSQLParsingException;
 
   /**
    * Execute the requested command parsed previously.
@@ -71,4 +72,22 @@ public interface OCommandExecutor {
    * Returns true if the command doesn't change the database, otherwise false.
    */
   public boolean isIdempotent();
+  
+  /**
+   * @return String description of the command syntax.
+   */
+  public String getSyntax();
+  
+  /**
+   * Attach a listener to this command.
+   * @param listener 
+   */
+  void addListener(OCommandListener listener);
+  
+  /**
+   * Remove aan attached  listener from this command.
+   * @param listener 
+   */
+  void removeListener(OCommandListener listener);
+  
 }

@@ -15,16 +15,13 @@
  */
 package com.orientechnologies.orient.core.sql.functions.coll;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 
 import com.orientechnologies.common.collection.OMultiValue;
 import com.orientechnologies.orient.core.command.OCommandContext;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunctionAbstract;
+import com.orientechnologies.orient.core.sql.model.OExpression;
 
 /**
  * This operator can work as aggregate or inline. If only one argument is passed than aggregates, otherwise executes, and returns, a
@@ -33,43 +30,35 @@ import com.orientechnologies.orient.core.sql.filter.OSQLFilterItemVariable;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLFunctionUnion extends OSQLFunctionMultiValueAbstract<Set<Object>> {
+public class OSQLFunctionUnion extends OSQLFunctionAbstract {
   public static final String NAME = "union";
 
+  private final Set<Object> result = new HashSet<Object>();
+  
   public OSQLFunctionUnion() {
     super(NAME, 1, -1);
   }
 
-  public Object execute(final OIdentifiable iCurrentRecord, ODocument iCurrentResult, final Object[] iParameters,
-      OCommandContext iContext) {
-    if (iParameters.length == 1) {
+  @Override
+  protected Object evaluateNow(OCommandContext context, Object candidate) {
+    
+    if (children.size() == 1) {
       // AGGREGATION MODE (STATEFULL)
-      Object value = iParameters[0];
+      Object value = children.get(0).evaluate(context, candidate);
       if (value != null) {
-
-        if (value instanceof OSQLFilterItemVariable)
-          value = ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iContext);
-
-        if (context == null)
-          context = new HashSet<Object>();
-
-        OMultiValue.add(context, value);
+        OMultiValue.add(result, value);
       }
 
-      return context;
+      return result;
     } else {
       // IN-LINE MODE (STATELESS)
-      final HashSet<Object> result = new HashSet<Object>();
-      for (Object value : iParameters) {
+      final Set<Object> result = new HashSet<Object>();
+      for (OExpression  exp : children) {
+        Object value = exp.evaluate(context, candidate);
         if (value != null) {
-
-          if (value instanceof OSQLFilterItemVariable)
-            value = ((OSQLFilterItemVariable) value).getValue(iCurrentRecord, iContext);
-
           OMultiValue.add(result, value);
         }
       }
-
       return result;
     }
   }
@@ -79,15 +68,11 @@ public class OSQLFunctionUnion extends OSQLFunctionMultiValueAbstract<Set<Object
   }
 
   @Override
-  public Object mergeDistributedResult(List<Object> resultsToMerge) {
-    final Collection<Object> result = new HashSet<Object>();
-    for (Object iParameter : resultsToMerge) {
-      @SuppressWarnings("unchecked")
-      final Collection<Object> items = (Collection<Object>) iParameter;
-      if (items != null) {
-        result.addAll(items);
-      }
-    }
-    return result;
+  public OSQLFunctionUnion copy() {
+    final OSQLFunctionUnion fct = new OSQLFunctionUnion();
+    fct.setAlias(getAlias());
+    fct.getArguments().addAll(getArguments());
+    return fct;
   }
+
 }
