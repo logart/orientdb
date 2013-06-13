@@ -29,8 +29,8 @@ import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageSegmentConfiguration;
 import com.orientechnologies.orient.core.id.OClusterPosition;
 import com.orientechnologies.orient.core.id.OClusterPositionFactory;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.storage.OPhysicalPosition;
 import com.orientechnologies.orient.core.storage.ORawBuffer;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageVariableParser;
@@ -63,7 +63,7 @@ public class LocalPaginatedClusterTest {
     when(storageConfiguration.getDirectory()).thenReturn(buildDirectory);
 
     ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
-    diskCache = new O2QCache(2L * 1024 * 1024 * 1024, 15000, directMemory, null,
+    diskCache = new OReadWriteCache(2L * 1024 * 1024 * 1024, 15000, directMemory, null,
         OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, storage, false);
 
     OStorageVariableParser variableParser = new OStorageVariableParser(buildDirectory);

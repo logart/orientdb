@@ -31,7 +31,7 @@ import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.common.serialization.types.OLongSerializer;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.storage.fs.OFileClassic;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.OLocalPaginatedStorage;
 
@@ -45,7 +45,7 @@ public class O2QCacheConcurrentTest {
   private static final int                           THREAD_COUNT    = 4;
   private static final int                           PAGE_COUNT      = 20;
   private static final int                           FILE_COUNT      = 8;
-  private O2QCache                                   buffer;
+  private OReadWriteCache                            buffer;
   private OLocalPaginatedStorage                     storageLocal;
   private ODirectMemory                              directMemory;
   private String[]                                   fileNames;
@@ -97,7 +97,7 @@ public class O2QCacheConcurrentTest {
   }
 
   private void initBuffer() throws IOException {
-    buffer = new O2QCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
   }
 
   @AfterClass
@@ -129,8 +129,9 @@ public class O2QCacheConcurrentTest {
     generateRemainingPagesQueueForAllFiles();
 
     executeConcurrentRandomReadAndWriteOperations();
-
+    System.out.println("before flush");
     buffer.flushBuffer();
+    System.out.println("after flush");
 
     validateFilesContent(version.byteValue());
   }
@@ -147,6 +148,7 @@ public class O2QCacheConcurrentTest {
       future.get();
   }
 
+  @SuppressWarnings("unchecked")
   private void generateRemainingPagesQueueForAllFiles() {
     List<Integer>[] array = new ArrayList[FILE_COUNT];
     for (int k = 0; k < FILE_COUNT; ++k) {
@@ -224,7 +226,7 @@ public class O2QCacheConcurrentTest {
 
       directMemory.set(pointer + systemOffset, new byte[] { version.byteValue(), 2, 3, seed, 5, 6, (byte) fileNumber,
           (byte) (pageIndex & 0xFF) }, 0, 8);
-
+      System.out.println("file\t" + fileNumber + "\tpage\t" + pageIndex + "\tversion\t" + version.byteValue());
       buffer.release(fileIds.get(fileNumber), pageIndex);
     }
 

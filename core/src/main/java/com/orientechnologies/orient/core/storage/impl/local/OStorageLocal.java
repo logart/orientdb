@@ -58,8 +58,8 @@ import com.orientechnologies.orient.core.id.OClusterPosition;
 import com.orientechnologies.orient.core.id.OClusterPositionFactory;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.memory.OMemoryWatchDog;
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.storage.OCluster;
@@ -136,7 +136,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
     final ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
 
     if (directMemory != null)
-      diskCache = new O2QCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * 1024 * 1024,
+      diskCache = new OReadWriteCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * 1024 * 1024,
           OGlobalConfiguration.DISK_CACHE_WRITE_QUEUE_LENGTH.getValueAsInteger(), directMemory, null,
           OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, this, false);
     else
@@ -878,7 +878,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
 
       getLevel2Cache().freeCluster(iClusterId);
 
-      if( iTruncate)
+      if (iTruncate)
         cluster.truncate();
       cluster.delete();
 

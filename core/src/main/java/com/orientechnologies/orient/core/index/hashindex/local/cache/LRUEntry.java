@@ -15,29 +15,24 @@
  */
 package com.orientechnologies.orient.core.index.hashindex.local.cache;
 
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSequenceNumber;
-
 /**
  * @author Andrey Lomakin
  * @since 25.02.13
  */
 class LRUEntry {
-  long               fileId;
-  long               pageIndex;
 
-  OLogSequenceNumber loadedLSN;
+  OCacheEntry value;
 
-  long               dataPointer;
-  boolean            isDirty;
+  long        hashCode;
 
-  long               hashCode;
+  LRUEntry    next;
 
-  int                usageCounter = 0;
+  LRUEntry    after;
+  LRUEntry    before;
 
-  LRUEntry           next;
-
-  LRUEntry           after;
-  LRUEntry           before;
+  LRUEntry() {
+    this.value = new OCacheEntry();
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -48,33 +43,16 @@ class LRUEntry {
 
     LRUEntry lruEntry = (LRUEntry) o;
 
-    if (dataPointer != lruEntry.dataPointer)
-      return false;
-    if (fileId != lruEntry.fileId)
-      return false;
-    if (isDirty != lruEntry.isDirty)
-      return false;
-    if (pageIndex != lruEntry.pageIndex)
-      return false;
-    if (loadedLSN != null ? !loadedLSN.equals(lruEntry.loadedLSN) : lruEntry.loadedLSN != null)
-      return false;
-
-    return true;
+    return value.equals(lruEntry.value);
   }
 
   @Override
   public int hashCode() {
-    int result = (int) (fileId ^ (fileId >>> 32));
-    result = 31 * result + (int) (pageIndex ^ (pageIndex >>> 32));
-    result = 31 * result + (loadedLSN != null ? loadedLSN.hashCode() : 0);
-    result = 31 * result + (int) (dataPointer ^ (dataPointer >>> 32));
-    result = 31 * result + (isDirty ? 1 : 0);
-    return result;
+    return value.hashCode();
   }
 
   @Override
   public String toString() {
-    return "LRUEntry{" + "fileId=" + fileId + ", pageIndex=" + pageIndex + ", loadedLSN=" + loadedLSN + ", dataPointer="
-        + dataPointer + ", isDirty=" + isDirty + ", hashCode=" + hashCode + ", usageCounter=" + usageCounter + '}';
+    return "LRUEntry{" + "value=" + value.toString() + '}';
   }
 }

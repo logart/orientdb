@@ -61,9 +61,9 @@ import com.orientechnologies.orient.core.exception.OStorageException;
 import com.orientechnologies.orient.core.id.OClusterPosition;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.OPageDataVerificationError;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.memory.OMemoryWatchDog;
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.storage.OCluster;
@@ -96,6 +96,8 @@ import com.orientechnologies.orient.core.tx.OTransaction;
 import com.orientechnologies.orient.core.version.ORecordVersion;
 import com.orientechnologies.orient.core.version.OVersionFactory;
 
+//import com.sun.istack.internal.NotNull;
+
 /**
  * @author Andrey Lomakin
  * @since 28.03.13
@@ -123,7 +125,9 @@ public class OLocalPaginatedStorage extends OStorageLocalAbstract {
   private final ScheduledExecutorService            fuzzyCheckpointExecutor = Executors
                                                                                 .newSingleThreadScheduledExecutor(new ThreadFactory() {
                                                                                   @Override
-                                                                                  public Thread newThread(Runnable r) {
+                                                                                  // @NotNull //TODO not null annotation idea
+                                                                                  // warning
+                                                                                  public Thread newThread(/* @NotNull */Runnable r) {
                                                                                     Thread thread = new Thread(r);
                                                                                     thread.setDaemon(true);
                                                                                     return thread;
@@ -132,7 +136,8 @@ public class OLocalPaginatedStorage extends OStorageLocalAbstract {
   private final ExecutorService                     checkpointExecutor      = Executors
                                                                                 .newSingleThreadExecutor(new ThreadFactory() {
                                                                                   @Override
-                                                                                  public Thread newThread(Runnable r) {
+                                                                                  /* @NotNull */
+                                                                                  public Thread newThread(/* @NotNull */Runnable r) {
                                                                                     Thread thread = new Thread(r);
                                                                                     thread.setDaemon(true);
                                                                                     return thread;
@@ -184,7 +189,7 @@ public class OLocalPaginatedStorage extends OStorageLocalAbstract {
     } else
       writeAheadLog = null;
 
-    diskCache = new O2QCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * ONE_KB * ONE_KB,
+    diskCache = new OReadWriteCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * ONE_KB * ONE_KB,
         OGlobalConfiguration.DISK_CACHE_WRITE_QUEUE_LENGTH.getValueAsInteger(), directMemory, writeAheadLog,
         OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * ONE_KB, this, false);
   }
