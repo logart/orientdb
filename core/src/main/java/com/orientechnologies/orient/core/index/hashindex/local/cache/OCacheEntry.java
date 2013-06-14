@@ -18,4 +18,37 @@ public class OCacheEntry {
   // TODO remove
   @Deprecated
   boolean            isDirty;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
+
+    OCacheEntry that = (OCacheEntry) o;
+
+    if (dataPointer != that.dataPointer)
+      return false;
+    if (fileId != that.fileId)
+      return false;
+    if (isDirty != that.isDirty)
+      return false;
+    if (pageIndex != that.pageIndex)
+      return false;
+    if (loadedLSN != null ? !loadedLSN.equals(that.loadedLSN) : that.loadedLSN != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (int) (fileId ^ (fileId >>> 32));
+    result = 31 * result + (int) (pageIndex ^ (pageIndex >>> 32));
+    result = 31 * result + (loadedLSN != null ? loadedLSN.hashCode() : 0);
+    result = 31 * result + (int) (dataPointer ^ (dataPointer >>> 32));
+    result = 31 * result + (isDirty ? 1 : 0);
+    return result;
+  }
 }
