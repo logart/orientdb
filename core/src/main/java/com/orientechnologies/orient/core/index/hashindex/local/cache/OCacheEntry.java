@@ -3,21 +3,27 @@ package com.orientechnologies.orient.core.index.hashindex.local.cache;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSequenceNumber;
 
 public class OCacheEntry {
-  long               fileId;
-  long               pageIndex;
+  final long               fileId;
+  final long               pageIndex;
 
-  OLogSequenceNumber loadedLSN;
+  final OLogSequenceNumber loadedLSN;
 
-  volatile long      dataPointer;
+  volatile long            dataPointer;
 
-  volatile int       usageCounter = 0;
+  volatile int             usageCounter = 0;
 
-  volatile boolean   inReadCache;     // will be accessible from flush thread
-  boolean            inWriteCache;    // volatile is redundant because of access only from cache thread
+  volatile boolean         inReadCache;     // will be accessible from flush thread
+  boolean                  inWriteCache;    // volatile is redundant because of access only from cache thread
 
   // TODO remove
   @Deprecated
-  boolean            isDirty;
+  volatile boolean         isDirty;
+
+  public OCacheEntry(long fileId, long pageIndex, OLogSequenceNumber loadedLSN) {
+    this.fileId = fileId;
+    this.pageIndex = pageIndex;
+    this.loadedLSN = loadedLSN;
+  }
 
   @Override
   public boolean equals(Object o) {

@@ -844,12 +844,9 @@ public class ReadWriteCacheTest {
   }
 
   private OCacheEntry generateEntry(long fileId, long pageIndex, long pointer, boolean dirty, OLogSequenceNumber lsn) {
-    OCacheEntry entry = new OCacheEntry();
-    entry.fileId = fileId;
-    entry.pageIndex = pageIndex;
+    OCacheEntry entry = new OCacheEntry(fileId, pageIndex, lsn);
     entry.dataPointer = pointer;
     entry.isDirty = dirty;
-    entry.loadedLSN = lsn;
     return entry;
   }
 

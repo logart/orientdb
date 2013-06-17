@@ -15,6 +15,8 @@
  */
 package com.orientechnologies.orient.core.index.hashindex.local.cache;
 
+import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSequenceNumber;
+
 /**
  * @author Andrey Lomakin
  * @since 25.02.13
@@ -30,8 +32,8 @@ class LRUEntry {
   LRUEntry    after;
   LRUEntry    before;
 
-  LRUEntry() {
-    this.value = new OCacheEntry();
+  LRUEntry(long fileId, long pageIndex, OLogSequenceNumber loadedLSN) {
+    this.value = new OCacheEntry(fileId, pageIndex, loadedLSN);
   }
 
   @Override

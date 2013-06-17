@@ -58,6 +58,7 @@ public class O2QCacheConcurrentTest {
 
   private AtomicBoolean                              continuousWrite = new AtomicBoolean(true);
   private AtomicInteger                              version         = new AtomicInteger(1);
+  private final boolean                              fileLock        = OGlobalConfiguration.FILE_LOCK.getValueAsBoolean();
 
   @BeforeClass
   public void beforeClass() throws IOException {
@@ -106,6 +107,7 @@ public class O2QCacheConcurrentTest {
     storageLocal.delete();
 
     deleteUsedFiles(FILE_COUNT);
+    OGlobalConfiguration.FILE_LOCK.setValue(fileLock);
   }
 
   private void deleteUsedFiles(int filesCount) {
@@ -129,9 +131,7 @@ public class O2QCacheConcurrentTest {
     generateRemainingPagesQueueForAllFiles();
 
     executeConcurrentRandomReadAndWriteOperations();
-    System.out.println("before flush");
     buffer.flushBuffer();
-    System.out.println("after flush");
 
     validateFilesContent(version.byteValue());
   }
@@ -226,7 +226,6 @@ public class O2QCacheConcurrentTest {
 
       directMemory.set(pointer + systemOffset, new byte[] { version.byteValue(), 2, 3, seed, 5, 6, (byte) fileNumber,
           (byte) (pageIndex & 0xFF) }, 0, 8);
-      System.out.println("file\t" + fileNumber + "\tpage\t" + pageIndex + "\tversion\t" + version.byteValue());
       buffer.release(fileIds.get(fileNumber), pageIndex);
     }
 

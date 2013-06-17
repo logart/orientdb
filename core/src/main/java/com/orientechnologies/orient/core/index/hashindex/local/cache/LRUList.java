@@ -121,10 +121,7 @@ class LRUList implements Iterable<OCacheEntry> {
     assert tail == null || tail.after == null;
 
     if (lruEntry == null) {
-      lruEntry = new LRUEntry();
-
-      lruEntry.value.pageIndex = pageIndex;
-      lruEntry.value.fileId = fileId;
+      lruEntry = new LRUEntry(fileId, pageIndex, loadedLSN);
       lruEntry.hashCode = hashCode;
 
       if (prevEntry == null)
@@ -136,8 +133,7 @@ class LRUList implements Iterable<OCacheEntry> {
     }
 
     lruEntry.value.dataPointer = dataPointer;
-    // lruEntry.value.isDirty = isDirty;
-    lruEntry.value.loadedLSN = loadedLSN;
+    lruEntry.value.isDirty = isDirty;
 
     removeFromLRUList(lruEntry);
 
