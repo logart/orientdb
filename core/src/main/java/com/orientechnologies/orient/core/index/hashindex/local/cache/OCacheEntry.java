@@ -10,10 +10,14 @@ public class OCacheEntry {
 
   volatile long            dataPointer;
 
-  volatile int             usageCounter = 0;
+  volatile int             usageCounter    = 0;
 
-  volatile boolean         inReadCache;     // will be accessible from flush thread
-  boolean                  inWriteCache;    // volatile is redundant because of access only from cache thread
+  volatile boolean         inReadCache;           // will be accessible from flush thread
+  volatile boolean         inWriteCache;          // volatile is redundant because of access only from cache thread
+
+  boolean                  recentlyChanged = true;
+
+  private final long       creationTime;
 
   // TODO remove
   @Deprecated
@@ -23,6 +27,7 @@ public class OCacheEntry {
     this.fileId = fileId;
     this.pageIndex = pageIndex;
     this.loadedLSN = loadedLSN;
+    this.creationTime = System.currentTimeMillis();
   }
 
   @Override
