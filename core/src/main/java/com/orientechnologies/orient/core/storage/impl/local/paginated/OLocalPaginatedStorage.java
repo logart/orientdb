@@ -122,27 +122,29 @@ public class OLocalPaginatedStorage extends OStorageLocalAbstract {
   private ODiskCache                                diskCache;
   private OWriteAheadLog                            writeAheadLog;
 
-  private final ScheduledExecutorService            fuzzyCheckpointExecutor = Executors
-                                                                                .newSingleThreadScheduledExecutor(new ThreadFactory() {
-                                                                                  @Override
-                                                                                  // @NotNull //TODO not null annotation idea
-                                                                                  // warning
-                                                                                  public Thread newThread(/* @NotNull */Runnable r) {
-                                                                                    Thread thread = new Thread(r);
-                                                                                    thread.setDaemon(true);
-                                                                                    return thread;
-                                                                                  }
-                                                                                });
-  private final ExecutorService                     checkpointExecutor      = Executors
-                                                                                .newSingleThreadExecutor(new ThreadFactory() {
-                                                                                  @Override
-                                                                                  /* @NotNull */
-                                                                                  public Thread newThread(/* @NotNull */Runnable r) {
-                                                                                    Thread thread = new Thread(r);
-                                                                                    thread.setDaemon(true);
-                                                                                    return thread;
-                                                                                  }
-                                                                                });
+  private final ScheduledExecutorService            fuzzyCheckpointExecutor    = Executors
+                                                                                   .newSingleThreadScheduledExecutor(new ThreadFactory() {
+                                                                                     @Override
+                                                                                     // @NotNull //TODO not null annotation idea
+                                                                                     // warning
+                                                                                     public Thread newThread(
+                                                                                     /* @NotNull */Runnable r) {
+                                                                                       Thread thread = new Thread(r);
+                                                                                       thread.setDaemon(true);
+                                                                                       return thread;
+                                                                                     }
+                                                                                   });
+  private final ExecutorService                     checkpointExecutor         = Executors
+                                                                                   .newSingleThreadExecutor(new ThreadFactory() {
+                                                                                     @Override
+                                                                                     /* @NotNull */
+                                                                                     public Thread newThread(
+                                                                                     /* @NotNull */Runnable r) {
+                                                                                       Thread thread = new Thread(r);
+                                                                                       thread.setDaemon(true);
+                                                                                       return thread;
+                                                                                     }
+                                                                                   });
 
   private boolean                                   storageRestoreWasPerformed = false;
 

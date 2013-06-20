@@ -1,5 +1,9 @@
 package com.orientechnologies.orient.test.internal.index;
 
+import java.lang.reflect.Field;
+
+import org.testng.annotations.Test;
+
 import com.orientechnologies.common.directmemory.ODirectMemoryFactory;
 import com.orientechnologies.common.test.SpeedTestMonoThread;
 import com.orientechnologies.common.util.MersenneTwisterFast;
@@ -13,8 +17,6 @@ import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteC
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageLocal;
-
-import org.testng.annotations.Test;
 
 /**
  * @author Andrey Lomakin

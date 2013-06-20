@@ -104,7 +104,7 @@ class LRUList implements Iterable<OCacheEntry> {
       tail = lruEntry.before;
   }
 
-  public OCacheEntry putToMRU(long fileId, long pageIndex, long dataPointer, boolean isDirty, OLogSequenceNumber loadedLSN) {
+  public OCacheEntry putToMRU(long fileId, long pageIndex, long dataPointer, OLogSequenceNumber loadedLSN) {
     long hashCode = hashCode(fileId, pageIndex);
     int index = index(hashCode);
 
@@ -133,7 +133,6 @@ class LRUList implements Iterable<OCacheEntry> {
     }
 
     lruEntry.value.dataPointer = dataPointer;
-    lruEntry.value.isDirty = isDirty;
 
     removeFromLRUList(lruEntry);
 

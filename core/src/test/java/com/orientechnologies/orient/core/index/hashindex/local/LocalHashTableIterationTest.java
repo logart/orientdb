@@ -18,6 +18,7 @@ import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.common.serialization.types.OStringSerializer;
 import com.orientechnologies.common.util.MersenneTwisterFast;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageLocal;
 
@@ -32,7 +33,7 @@ public class LocalHashTableIterationTest {
   private ODatabaseDocumentTx              databaseDocumentTx;
 
   private OLocalHashTable<Integer, String> localHashTable;
-  private OReadWriteCache                  buffer;
+  private ODiskCache                       buffer;
 
   @BeforeClass
   public void beforeClass() {

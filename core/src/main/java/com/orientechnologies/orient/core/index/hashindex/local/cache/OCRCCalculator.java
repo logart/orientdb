@@ -5,7 +5,7 @@ import java.util.zip.CRC32;
 import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.common.serialization.types.OLongSerializer;
 
-public class CRCCalculator {
+public class OCRCCalculator {
   public static int calculatePageCrc(byte[] pageData) {
     int systemSize = OLongSerializer.LONG_SIZE + OIntegerSerializer.INT_SIZE;
 

@@ -54,7 +54,8 @@ public class OAlignResponseDistributedTask extends OAbstractDistributedTask<Inte
 
     } else {
       // ALIGNMENT DONE
-      OLogManager.instance().info(this, "DISTRIBUTED <-[%s/%s] alignment ended: %d operation(s)", nodeSource, databaseName, aligned);
+      OLogManager.instance()
+          .info(this, "DISTRIBUTED <-[%s/%s] alignment ended: %d operation(s)", nodeSource, databaseName, aligned);
 
       dManager.endAlignment(nodeSource, databaseName);
     }

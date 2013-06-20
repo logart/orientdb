@@ -66,7 +66,6 @@ class O2QCache {
 
     K_IN = maxSize >> 2;
     K_OUT = maxSize >> 1;
-
   }
 
   public void clear() {
@@ -77,59 +76,73 @@ class O2QCache {
       fileEntries.clear();
   }
 
-  private OCacheEntry updateCache(long fileId, long pageIndex) throws IOException {
+  public OCacheEntry load(OCacheEntry entry) throws IOException {
+    OCacheEntry cacheEntry = updateCache(entry.fileId, entry.pageIndex, entry.dataPointer);
+    entry.usageCounter++;
+    return cacheEntry;
+  }
+
+  public OCacheEntry load(long fileId, long pageIndex) throws IOException {
+    final OCacheEntry entry = updateCache(fileId, pageIndex, ODirectMemory.NULL_POINTER);
+    entry.usageCounter++;
+    return entry;
+  }
+
+  private OCacheEntry updateCache(long fileId, long pageIndex, long dataPointer) throws IOException {
     OCacheEntry lruEntry = am.get(fileId, pageIndex);
     if (lruEntry != null) {
-      lruEntry = am.putToMRU(fileId, pageIndex, lruEntry.dataPointer, lruEntry.isDirty, lruEntry.loadedLSN);
+      lruEntry = am.putToMRU(fileId, pageIndex, lruEntry.dataPointer, lruEntry.loadedLSN);
 
       return lruEntry;
     }
 
     lruEntry = a1out.remove(fileId, pageIndex);
     if (lruEntry != null) {
-      removeColdestPageIfNeeded();
-
-      CacheResult cacheResult = cacheFileContent(fileId, pageIndex);
-      lruEntry.dataPointer = cacheResult.dataPointer;
-      lruEntry.isDirty = cacheResult.isDirty;
-
-      OLogSequenceNumber lsn;
-      // if (cacheResult.isDirty)
-      // TODO
-      // lsn = dirtyPages.get(fileId).get(pageIndex);
-      // else
-      // lsn = getLogSequenceNumberFromPage(cacheResult.dataPointer);
-
-      lruEntry = am.putToMRU(fileId, pageIndex, lruEntry.dataPointer, lruEntry.isDirty, lsn);
-      return lruEntry;
+      putEntryToLongLeaveCache(lruEntry);
     }
 
     lruEntry = a1in.get(fileId, pageIndex);
     if (lruEntry != null)
       return lruEntry;
 
-    removeColdestPageIfNeeded();
-
-    CacheResult cacheResult = cacheFileContent(fileId, pageIndex);
-    OLogSequenceNumber lsn;
-    // if (cacheResult.isDirty)
-    // lsn = dirtyPages.get(fileId).get(pageIndex);
-    // else
-    // todo
-    // lsn = getLogSequenceNumberFromPage(cacheResult.dataPointer);
-
-    lruEntry = a1in.putToMRU(fileId, pageIndex, cacheResult.dataPointer, cacheResult.isDirty, lsn);
+    lruEntry = putRecordToShortLeaveCache(fileId, pageIndex, dataPointer);
 
     filePages.get(fileId).add(pageIndex);
 
     return lruEntry;
   }
 
-  private CacheResult cacheFileContent(long fileId, long pageIndex) throws IOException {
-    FileLockKey key = new FileLockKey(fileId, pageIndex);
-    if (evictedPages.containsKey(key))
-      return new CacheResult(true, evictedPages.remove(key));
+  private OCacheEntry putEntryToLongLeaveCache(OCacheEntry cacheEntry) throws IOException {
+    removeColdestPageIfNeeded();
 
+    cacheEntry.dataPointer = cacheFileContent(cacheEntry.fileId, cacheEntry.pageIndex);
+
+    OLogSequenceNumber lsn;
+    if (cacheEntry.inWriteCache)
+      lsn = cacheEntry.loadedLSN;
+    else
+      lsn = OLSNHelper.getLogSequenceNumberFromPage(cacheEntry.dataPointer, directMemory);
+
+    cacheEntry = am.putToMRU(cacheEntry.fileId, cacheEntry.pageIndex, cacheEntry.dataPointer, lsn);
+    return cacheEntry;
+
+  }
+
+  private OCacheEntry putRecordToShortLeaveCache(long fileId, long pageIndex, long dataPointer) throws IOException {
+    OCacheEntry cacheEntry;
+    removeColdestPageIfNeeded();
+
+    if (dataPointer == ODirectMemory.NULL_POINTER) {
+      dataPointer = cacheFileContent(fileId, pageIndex);
+    }
+
+    OLogSequenceNumber lsn = OLSNHelper.getLogSequenceNumberFromPage(dataPointer, directMemory);
+
+    cacheEntry = a1in.putToMRU(fileId, pageIndex, dataPointer, lsn);
+    return cacheEntry;
+  }
+
+  private long cacheFileContent(long fileId, long pageIndex) throws IOException {
     final OFileClassic fileClassic = files.get(fileId);
     final long startPosition = pageIndex * pageSize;
     final long endPosition = startPosition + pageSize;
@@ -140,11 +153,11 @@ class O2QCache {
       fileClassic.read(startPosition, content, content.length);
       dataPointer = directMemory.allocate(content);
     } else {
-      fileClassic.allocateSpace((int) (endPosition - fileClassic.getFilledUpTo()));
-      dataPointer = directMemory.allocate(content);
+      // todo normal exception
+      throw new RuntimeException("read non existing page");
     }
 
-    return new CacheResult(false, dataPointer);
+    return dataPointer;
   }
 
   private void removeColdestPageIfNeeded() throws IOException {
@@ -160,7 +173,7 @@ class O2QCache {
             directMemory.free(removedFromAInEntry.dataPointer);
           }
 
-          a1out.putToMRU(removedFromAInEntry.fileId, removedFromAInEntry.pageIndex, ODirectMemory.NULL_POINTER, false, null);
+          a1out.putToMRU(removedFromAInEntry.fileId, removedFromAInEntry.pageIndex, ODirectMemory.NULL_POINTER, null);
         }
         if (a1out.size() > K_OUT) {
           OCacheEntry removedEntry = a1out.removeLRU();
@@ -172,49 +185,16 @@ class O2QCache {
         OCacheEntry removedEntry = am.removeLRU();
         if (removedEntry == null) {
           increaseCacheSize();
-          return;
         } else {
           if (!removedEntry.inWriteCache) {
             assert removedEntry.usageCounter == 0;
             directMemory.free(removedEntry.dataPointer);
+            Set<Long> pageEntries = filePages.get(removedEntry.fileId);
+            pageEntries.remove(removedEntry.pageIndex);
           }
-
-      return errors.toArray(new OPageDataVerificationError[errors.size()]);
-    }
-  }
-
-  @Override
-  public Set<ODirtyPage> logDirtyPagesTable() throws IOException {
-    synchronized (syncObject) {
-      if (writeAheadLog == null)
-        return Collections.emptySet();
-
-      Set<ODirtyPage> logDirtyPages = new HashSet<ODirtyPage>(dirtyPages.size());
-      for (long fileId : dirtyPages.keySet()) {
-        SortedMap<Long, OLogSequenceNumber> pages = dirtyPages.get(fileId);
-        for (Map.Entry<Long, OLogSequenceNumber> pageEntry : pages.entrySet()) {
-          final ODirtyPage logDirtyPage = new ODirtyPage(files.get(fileId).getName(), pageEntry.getKey(), pageEntry.getValue());
-          logDirtyPages.add(logDirtyPage);
         }
       }
     }
-  }
-
-  private OCacheEntry remove(long fileId, long pageIndex) {
-    OCacheEntry lruEntry = am.remove(fileId, pageIndex);
-    if (lruEntry != null) {
-      if (lruEntry.usageCounter > 1)
-        throw new IllegalStateException("Record cannot be removed because it is used!");
-      return lruEntry;
-    }
-    lruEntry = a1out.remove(fileId, pageIndex);
-    if (lruEntry != null) {
-      return lruEntry;
-    }
-    lruEntry = a1in.remove(fileId, pageIndex);
-    if (lruEntry != null && lruEntry.usageCounter > 1)
-      throw new IllegalStateException("Record cannot be removed because it is used!");
-    return lruEntry;
   }
 
   public OCacheEntry get(long fileId, long pageIndex) {
@@ -253,21 +233,13 @@ class O2QCache {
     return a1in;
   }
 
-  public OCacheEntry load(OCacheEntry entry) {
-    return null; // To change body of created methods use File | Settings | File Templates.
+  public void closeFile(long fileId, Map<Long, Set<Long>> filePages, boolean flush) {
+    // todo
+    // check if this method is necessary
   }
 
-  public OCacheEntry load(long fileId, long pageIndex) {
-    return null; // To change body of created methods use File | Settings | File Templates.
-  }
-
-  private static class CacheResult {
-    private final boolean isDirty;
-    private final long    dataPointer;
-
-    private CacheResult(boolean dirty, long dataPointer) {
-      isDirty = dirty;
-      this.dataPointer = dataPointer;
-    }
+  public void deleteFile(long fileId) {
+    // todo
+    // check if this method is necessary
   }
 }

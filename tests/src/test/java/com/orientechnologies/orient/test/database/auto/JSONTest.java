@@ -65,7 +65,7 @@ public class JSONTest {
     Assert.assertEquals(list.get(0), "string");
     Assert.assertNull(list.get(1));
   }
-  
+
   @Test
   public void testNullity() {
     ODocument newDoc = new ODocument();

@@ -77,7 +77,7 @@ public class OReadWriteCache implements ODiskCache {
     }
 
     writeCache = new OWoWCache(syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files);
-    readCache = new O2QCache(files, filePages, pageSize);
+    readCache = new O2QCache(files, filePages, pageSize, directMemory);
 
     syncObject = new Object();
   }
@@ -108,7 +108,8 @@ public class OReadWriteCache implements ODiskCache {
   @Override
   public void markDirty(long fileId, long pageIndex) {
     synchronized (syncObject) {
-      writeCache.markDirty(fileId, pageIndex);
+      OCacheEntry cacheEntry = readCache.get(fileId, pageIndex);
+      writeCache.load(cacheEntry);
     }
   }
 
@@ -124,14 +125,13 @@ public class OReadWriteCache implements ODiskCache {
     }
   }
 
-  private OCacheEntry storeRecordInReadCache(long fileId, long pageIndex, OCacheEntry cacheEntry) {
+  private OCacheEntry storeRecordInReadCache(long fileId, long pageIndex, OCacheEntry cacheEntry) throws IOException {
     if (cacheEntry == null) {
       OCacheEntry dirtyEntry = writeCache.get(fileId, pageIndex);
-      if (dirtyEntry != null) {
-        readCache.load(dirtyEntry);
-      } else {
-        cacheEntry = readCache.load(fileId, pageIndex);
+      if (dirtyEntry == null) {
+        dirtyEntry = writeCache.load(fileId, pageIndex);
       }
+      cacheEntry = readCache.load(dirtyEntry);
     }
     return cacheEntry;
   }
@@ -165,12 +165,18 @@ public class OReadWriteCache implements ODiskCache {
 
   @Override
   public void closeFile(final long fileId) throws IOException {
+    closeFile(fileId, true);
+  }
+
+  @Override
+  public void closeFile(final long fileId, boolean flush) throws IOException {
     synchronized (syncObject) {
       OFileClassic fileClassic = files.get(fileId);
       if (fileClassic == null || !fileClassic.isOpen())
         return;
 
-      writeCache.closeFile(fileId, filePages);
+      writeCache.closeFile(fileId, filePages, flush);
+      readCache.closeFile(fileId, filePages, flush);
 
       fileClassic.close();
     }
@@ -190,10 +196,12 @@ public class OReadWriteCache implements ODiskCache {
       files.remove(fileId);
       filePages.remove(fileId);
       writeCache.deleteFile(fileId);
+      readCache.deleteFile(fileId);
 
     }
   }
 
+  // todo remove records from write cache
   @Override
   public void truncateFile(long fileId) throws IOException {
     synchronized (syncObject) {
@@ -222,6 +230,7 @@ public class OReadWriteCache implements ODiskCache {
             + osFileName.substring(osFileName.lastIndexOf(oldFileName) + oldFileName.length()));
         boolean renamed = file.renameTo(newFile);
         while (!renamed) {
+          // todo why?
           OMemoryWatchDog.freeMemoryForResourceCleanup(100);
           renamed = file.renameTo(newFile);
         }
@@ -338,7 +347,7 @@ public class OReadWriteCache implements ODiskCache {
 
             final int storedCRC32 = OIntegerSerializer.INSTANCE.deserializeNative(data, OLongSerializer.LONG_SIZE);
 
-            final int calculatedCRC32 = CRCCalculator.calculatePageCrc(data);
+            final int calculatedCRC32 = OCRCCalculator.calculatePageCrc(data);
             if (storedCRC32 != calculatedCRC32) {
               checkSumIncorrect = true;
               if (commandOutputListener != null)
@@ -394,5 +403,17 @@ public class OReadWriteCache implements ODiskCache {
 
   int getMaxSize() {
     return maxSize;
+  }
+
+  LRUList getAm() {
+    return readCache.getAm();
+  }
+
+  LRUList getA1in() {
+    return readCache.getA1in();
+  }
+
+  LRUList getA1out() {
+    return readCache.getA1out();
   }
 }
