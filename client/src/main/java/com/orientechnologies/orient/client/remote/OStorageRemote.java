@@ -1206,7 +1206,7 @@ public class OStorageRemote extends OStorageAbstract implements OStorageProxy {
 
         // UPDATE THE CACHE ONLY IF THE ITERATOR ALLOWS IT. USE THE STRATEGY TO ALWAYS REMOVE ALL THE RECORDS SINCE THEY COULD BE
         // CHANGED AS CONTENT IN CASE OF TREE AND GRAPH DUE TO CROSS REFERENCES
-        OTransactionAbstract.updateCacheFromEntries(this, iTx, iTx.getAllRecordEntries(), false);
+        OTransactionAbstract.updateCacheFromEntries(iTx, iTx.getAllRecordEntries(), false);
 
         break;
 
@@ -1623,6 +1623,7 @@ public class OStorageRemote extends OStorageAbstract implements OStorageProxy {
       }
 
       // CHECK AGAIN IF THERE ARE FREE CHANNELS
+      createConnectionPool();
       synchronized (networkPool) {
         availableConnections = !networkPool.isEmpty();
       }
@@ -1929,7 +1930,7 @@ public class OStorageRemote extends OStorageAbstract implements OStorageProxy {
 
       final List<ODocument> members = clusterConfiguration.field("members");
       if (members != null) {
-        // serverURLs.clear();
+        serverURLs.clear();
 
         for (ODocument m : members)
           if (m != null && !serverURLs.contains((String) m.field("id"))) {

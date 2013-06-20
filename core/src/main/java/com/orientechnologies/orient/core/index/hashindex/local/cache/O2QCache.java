@@ -179,8 +179,22 @@ class O2QCache {
             directMemory.free(removedEntry.dataPointer);
           }
 
-          Set<Long> pageEntries = filePages.get(removedEntry.fileId);
-          pageEntries.remove(removedEntry.pageIndex);
+      return errors.toArray(new OPageDataVerificationError[errors.size()]);
+    }
+  }
+
+  @Override
+  public Set<ODirtyPage> logDirtyPagesTable() throws IOException {
+    synchronized (syncObject) {
+      if (writeAheadLog == null)
+        return Collections.emptySet();
+
+      Set<ODirtyPage> logDirtyPages = new HashSet<ODirtyPage>(dirtyPages.size());
+      for (long fileId : dirtyPages.keySet()) {
+        SortedMap<Long, OLogSequenceNumber> pages = dirtyPages.get(fileId);
+        for (Map.Entry<Long, OLogSequenceNumber> pageEntry : pages.entrySet()) {
+          final ODirtyPage logDirtyPage = new ODirtyPage(files.get(fileId).getName(), pageEntry.getKey(), pageEntry.getValue());
+          logDirtyPages.add(logDirtyPage);
         }
       }
     }

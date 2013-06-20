@@ -1,9 +1,5 @@
 package com.orientechnologies.orient.test.internal.index;
 
-import java.lang.reflect.Field;
-
-import org.testng.annotations.Test;
-
 import com.orientechnologies.common.directmemory.ODirectMemoryFactory;
 import com.orientechnologies.common.test.SpeedTestMonoThread;
 import com.orientechnologies.common.util.MersenneTwisterFast;
@@ -17,6 +13,8 @@ import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteC
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageLocal;
+
+import org.testng.annotations.Test;
 
 /**
  * @author Andrey Lomakin
@@ -33,7 +31,7 @@ public class HashIndexSpeedTest extends SpeedTestMonoThread {
   }
 
   @Override
-  @Test(enabled = true)
+  @Test(enabled = false)
   public void init() throws Exception {
     String buildDirectory = System.getProperty("buildDirectory", ".");
     if (buildDirectory == null)
@@ -63,7 +61,7 @@ public class HashIndexSpeedTest extends SpeedTestMonoThread {
       diskCache.setAccessible(false);
     }
     hashIndex.create("uhashIndexTest", new OSimpleKeyIndexDefinition(OType.STRING), databaseDocumentTx,
-        OMetadata.CLUSTER_INDEX_NAME, new int[0], null);
+        OMetadata.CLUSTER_INDEX_NAME, new int[0], true, null);
   }
 
   @Override

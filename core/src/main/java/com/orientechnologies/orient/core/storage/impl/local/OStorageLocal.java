@@ -816,6 +816,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
       boolean forceListBased, final Object... iParameters) {
     checkOpeness();
 
+    lock.acquireExclusiveLock();
     try {
       final OCluster cluster;
       if (iClusterName != null) {
@@ -846,6 +847,8 @@ public class OStorageLocal extends OStorageLocalAbstract {
     } catch (Exception e) {
       OLogManager.instance().exception("Error in creation of new cluster '" + iClusterName + "' of type: " + iClusterType, e,
           OStorageException.class);
+    } finally {
+      lock.releaseExclusiveLock();
     }
 
     return -1;
@@ -1016,13 +1019,8 @@ public class OStorageLocal extends OStorageLocalAbstract {
       lock.acquireExclusiveLock();
       try {
         if (txManager.isCommitting()) {
-          final ORID oldRid = iRid.copy();
-
           ppos = txManager.createRecord(txManager.getCurrentTransaction().getId(), dataSegment, cluster, iRid, iContent,
-              iRecordVersion, iRecordType, iDataSegmentId);
-          iRid.clusterPosition = ppos.clusterPosition;
-
-          txManager.getCurrentTransaction().updateIndexIdentityAfterCommit(oldRid, iRid);
+              iRecordVersion, iRecordType);
         } else {
           ppos = createRecord(dataSegment, cluster, iContent, iRecordType, iRid, iRecordVersion);
           if (OGlobalConfiguration.NON_TX_RECORD_UPDATE_SYNCH.getValueAsBoolean()
@@ -2072,7 +2070,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
     modificationLock.allowModifications();
   }
 
-  public boolean isClusterSoftlyClosed(String clusterName) {
+  public boolean wasClusterSoftlyClosed(String clusterName) {
     final OCluster indexCluster = clusterMap.get(clusterName);
     return !(indexCluster instanceof OClusterLocal) || ((OClusterLocal) indexCluster).isSoftlyClosed();
   }
