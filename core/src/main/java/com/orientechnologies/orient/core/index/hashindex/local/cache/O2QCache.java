@@ -52,7 +52,7 @@ class O2QCache {
 
   private ODirectMemory                 directMemory;
 
-  O2QCache(Map<Long, OFileClassic> files, Map<Long, Set<Long>> filePages, int pageSize, ODirectMemory directMemory) {
+  O2QCache(int maxSize, Map<Long, OFileClassic> files, Map<Long, Set<Long>> filePages, int pageSize, ODirectMemory directMemory) {
     am = new LRUList();
     a1out = new LRUList();
     a1in = new LRUList();
@@ -63,6 +63,8 @@ class O2QCache {
     this.pageSize = pageSize;
 
     this.directMemory = directMemory;
+
+    this.maxSize = maxSize;
 
     K_IN = maxSize >> 2;
     K_OUT = maxSize >> 1;
@@ -79,12 +81,13 @@ class O2QCache {
   public OCacheEntry load(OCacheEntry entry) throws IOException {
     OCacheEntry cacheEntry = updateCache(entry.fileId, entry.pageIndex, entry.dataPointer);
     entry.usageCounter++;
+    entry.inReadCache = true;
     return cacheEntry;
   }
 
   public OCacheEntry load(long fileId, long pageIndex) throws IOException {
     final OCacheEntry entry = updateCache(fileId, pageIndex, ODirectMemory.NULL_POINTER);
-    entry.usageCounter++;
+    entry.inReadCache = true;
     return entry;
   }
 
@@ -153,8 +156,8 @@ class O2QCache {
       fileClassic.read(startPosition, content, content.length);
       dataPointer = directMemory.allocate(content);
     } else {
-      // todo normal exception
-      throw new RuntimeException("read non existing page");
+      fileClassic.allocateSpace((int) (endPosition - fileClassic.getFilledUpTo()));
+      dataPointer = directMemory.allocate(content);
     }
 
     return dataPointer;

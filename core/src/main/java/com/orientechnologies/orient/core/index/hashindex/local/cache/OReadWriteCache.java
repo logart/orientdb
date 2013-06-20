@@ -76,8 +76,8 @@ public class OReadWriteCache implements ODiskCache {
       maxSize = (int) tmpMaxSize;
     }
 
-    writeCache = new OWoWCache(syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files);
-    readCache = new O2QCache(files, filePages, pageSize, directMemory);
+    writeCache = new OWoWCache(maxSize >> 4, syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files);
+    readCache = new O2QCache((maxSize - maxSize >> 4), files, filePages, pageSize, directMemory);
 
     syncObject = new Object();
   }
@@ -129,9 +129,10 @@ public class OReadWriteCache implements ODiskCache {
     if (cacheEntry == null) {
       OCacheEntry dirtyEntry = writeCache.get(fileId, pageIndex);
       if (dirtyEntry == null) {
-        dirtyEntry = writeCache.load(fileId, pageIndex);
+        cacheEntry = readCache.load(fileId, pageIndex);
+      } else {
+        cacheEntry = readCache.load(dirtyEntry);
       }
-      cacheEntry = readCache.load(dirtyEntry);
     }
     return cacheEntry;
   }
@@ -415,5 +416,9 @@ public class OReadWriteCache implements ODiskCache {
 
   LRUList getA1out() {
     return readCache.getA1out();
+  }
+
+  public OWoWCache getWriteCache() {
+    return writeCache;
   }
 }
