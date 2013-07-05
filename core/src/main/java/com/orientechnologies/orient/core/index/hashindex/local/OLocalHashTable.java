@@ -1684,7 +1684,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     buffer.release(fileLevelIds[fileLevel], pageIndex);
   }
 
-  private void markPageAsDirty(long pageIndex, int fileLevel) {
+  private void markPageAsDirty(long pageIndex, int fileLevel) throws IOException {
     buffer.markDirty(fileLevelIds[fileLevel], pageIndex);
   }
 

@@ -2,7 +2,10 @@ package com.orientechnologies.orient.core.index.hashindex.local.cache;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -30,7 +33,6 @@ public class WoWCacheTest {
   private OLocalPaginatedStorage storageLocal;
   private ODirectMemory          directMemory;
   private String                 fileName;
-  private byte                   seed;
   private OWriteAheadLog         writeAheadLog;
   private OWoWCache              writeCache;
 
@@ -56,9 +58,6 @@ public class WoWCacheTest {
     closeBufferAndDeleteFile();
 
     initBuffer();
-
-    Random random = new Random();
-    seed = (byte) (random.nextInt() & 0xFF);
   }
 
   private void closeBufferAndDeleteFile() throws IOException {
@@ -102,7 +101,7 @@ public class WoWCacheTest {
   }
 
   private void initBuffer() throws IOException {
-    cache = new OReadWriteCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    cache = new OReadWriteCache(16 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
     writeCache = cache.getWriteCache();
 
     final OStorageSegmentConfiguration segmentConfiguration = new OStorageSegmentConfiguration(storageLocal.getConfiguration(),
@@ -114,14 +113,73 @@ public class WoWCacheTest {
   public void testCacheShouldContainsRecordsAfterLoadMethod() throws Exception {
     long fileId = cache.openFile(fileName);
 
-    OCacheEntry cacheEntry = writeCache.load(fileId, 0);
+    OCacheEntry cacheEntry = writeCache.markDirty(fileId, 0);
     Assert.assertNotNull(cacheEntry);
     Assert.assertEquals(cacheEntry.fileId, fileId);
     Assert.assertEquals(cacheEntry.pageIndex, 0);
     Assert.assertFalse(ODirectMemory.NULL_POINTER == cacheEntry.dataPointer);
     Assert.assertTrue(cacheEntry.inWriteCache);
     Assert.assertTrue(cacheEntry.recentlyChanged);
-    Assert.assertEquals(cacheEntry.usageCounter, 1);
+    Assert.assertEquals(cacheEntry.usageCounter, 0);
 
+  }
+
+  @Test
+  public void testFlushOneWriteGroup() throws Exception {
+    long fileId = cache.openFile(fileName);
+    for (int i = 0; i < 4; ++i) {
+      writeCache.markDirty(fileId, i);
+    }
+    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
+    Collection<OCacheEntry> values = internalCache.values();
+    for (OCacheEntry value : values) {
+      Assert.assertTrue(value.recentlyChanged);
+    }
+    writeCache.flushFile(fileId, true);
+    for (OCacheEntry value : values) {
+      Assert.assertFalse(value.recentlyChanged);
+    }
+  }
+
+  @Test
+  public void testFlushTwoWriteGroups() throws Exception {
+    long fileId = cache.openFile(fileName);
+    for (int i = 0; i < 32; i += 8) {
+      writeCache.markDirty(fileId, i);
+    }
+    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
+    Collection<OCacheEntry> values = internalCache.values();
+    for (OCacheEntry value : values) {
+      Assert.assertTrue(value.recentlyChanged);
+    }
+    HashMap<OReadWriteCache.FileLockKey, OCacheEntry> cacheSnapshot = new HashMap<OReadWriteCache.FileLockKey, OCacheEntry>(
+        internalCache);
+    writeCache.flushFile(fileId, true);
+    for (int i = 0; i < 16; i += 8) {
+      OCacheEntry cacheEntry = cacheSnapshot.get(new OReadWriteCache.FileLockKey(fileId, i));
+      Assert.assertFalse(cacheEntry.recentlyChanged);
+    }
+    for (int i = 16; i < 32; i += 8) {
+      OCacheEntry cacheEntry = cacheSnapshot.get(new OReadWriteCache.FileLockKey(fileId, i));
+      Assert.assertTrue(cacheEntry.recentlyChanged);
+    }
+  }
+
+  @Test
+  public void testFlushShouldRemoveRecordFromCache() throws Exception {
+    long fileId = cache.openFile(fileName);
+    for (int i = 0; i < 4; ++i) {
+      writeCache.markDirty(fileId, i);
+    }
+    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
+    Collection<OCacheEntry> values = Collections.unmodifiableCollection(internalCache.values());
+    for (OCacheEntry value : values) {
+      Assert.assertTrue(value.recentlyChanged);
+    }
+    writeCache.flushFile(fileId, true);
+    for (OCacheEntry value : values) {
+      Assert.assertFalse(value.recentlyChanged);
+    }
+    Assert.assertTrue(writeCache.getCache().isEmpty());
   }
 }

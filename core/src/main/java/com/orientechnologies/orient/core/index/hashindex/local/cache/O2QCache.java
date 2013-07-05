@@ -18,6 +18,9 @@ package com.orientechnologies.orient.core.index.hashindex.local.cache;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.orientechnologies.common.directmemory.ODirectMemory;
 import com.orientechnologies.common.log.OLogManager;
@@ -32,27 +35,29 @@ import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSe
  */
 class O2QCache {
 
-  private int                           K_IN;
-  private int                           K_OUT;
+  private int                                                             K_IN;
+  private int                                                             K_OUT;
 
-  private LRUList                       am;
-  private LRUList                       a1out;
-  private LRUList                       a1in;
+  private LRUList                                                         am;
+  private LRUList                                                         a1out;
+  private LRUList                                                         a1in;
 
-  private int                           maxSize;
+  private int                                                             maxSize;
 
-  private final int                     pageSize;
+  private final int                                                       pageSize;
 
-  private final Map<Long, OFileClassic> files;
+  private final Map<Long, OFileClassic>                                   files;
 
   /**
    * Contains all pages in cache for given file, not only dirty onces.
    */
-  private final Map<Long, Set<Long>>    filePages;
+  private final Map<Long, Set<Long>>                                      filePages;
 
-  private ODirectMemory                 directMemory;
+  private ODirectMemory                                                   directMemory;
+  private final ConcurrentMap<OReadWriteCache.FileLockKey, ReadWriteLock> entriesLocks;
 
-  O2QCache(int maxSize, Map<Long, OFileClassic> files, Map<Long, Set<Long>> filePages, int pageSize, ODirectMemory directMemory) {
+  O2QCache(int maxSize, Map<Long, OFileClassic> files, Map<Long, Set<Long>> filePages, int pageSize, ODirectMemory directMemory,
+      ConcurrentMap<OReadWriteCache.FileLockKey, ReadWriteLock> entriesLocks) {
     am = new LRUList();
     a1out = new LRUList();
     a1in = new LRUList();
@@ -65,6 +70,8 @@ class O2QCache {
     this.directMemory = directMemory;
 
     this.maxSize = maxSize;
+
+    this.entriesLocks = entriesLocks;
 
     K_IN = maxSize >> 2;
     K_OUT = maxSize >> 1;
@@ -79,10 +86,18 @@ class O2QCache {
   }
 
   public OCacheEntry load(OCacheEntry entry) throws IOException {
-    OCacheEntry cacheEntry = updateCache(entry.fileId, entry.pageIndex, entry.dataPointer);
-    entry.usageCounter++;
-    entry.inReadCache = true;
-    return cacheEntry;
+    OReadWriteCache.FileLockKey key = new OReadWriteCache.FileLockKey(entry.fileId, entry.pageIndex);
+    entriesLocks.putIfAbsent(key, new ReentrantReadWriteLock());
+    ReadWriteLock lock = entriesLocks.get(key);
+    lock.readLock().lock();
+    try {
+      OCacheEntry cacheEntry = updateCache(entry.fileId, entry.pageIndex, entry.dataPointer);
+      entry.usageCounter++;
+      entry.inReadCache = true;
+      return cacheEntry;
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
   public OCacheEntry load(long fileId, long pageIndex) throws IOException {
@@ -236,9 +251,27 @@ class O2QCache {
     return a1in;
   }
 
-  public void closeFile(long fileId, Map<Long, Set<Long>> filePages, boolean flush) {
-    // todo
-    // check if this method is necessary
+  public void closeFile(long fileId, Set<Long> filePages) {
+    for (Long pageIndex : filePages) {
+      remove(fileId, pageIndex);
+    }
+  }
+
+  private OCacheEntry remove(long fileId, long pageIndex) {
+    OCacheEntry lruEntry = am.remove(fileId, pageIndex);
+    if (lruEntry != null) {
+      if (lruEntry.usageCounter > 1)
+        throw new IllegalStateException("Record cannot be removed because it is used!");
+      return lruEntry;
+    }
+    lruEntry = a1out.remove(fileId, pageIndex);
+    if (lruEntry != null) {
+      return lruEntry;
+    }
+    lruEntry = a1in.remove(fileId, pageIndex);
+    if (lruEntry != null && lruEntry.usageCounter > 1)
+      throw new IllegalStateException("Record cannot be removed because it is used!");
+    return lruEntry;
   }
 
   public void deleteFile(long fileId) {

@@ -111,7 +111,7 @@ public class ReadWriteCacheTest {
   }
 
   private void initBuffer() throws IOException {
-    buffer = new OReadWriteCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(16 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
 
     final OStorageSegmentConfiguration segmentConfiguration = new OStorageSegmentConfiguration(storageLocal.getConfiguration(),
         "oRWCacheTest", 0);
@@ -715,7 +715,7 @@ public class ReadWriteCacheTest {
         "o2QCacheTest", 0);
     segmentConfiguration.fileType = OFileFactory.CLASSIC;
 
-    buffer = new OReadWriteCache(4 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(16 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
 
     long fileId = buffer.openFile(fileName);
     OLogSequenceNumber lsnToFlush = null;
@@ -750,7 +750,7 @@ public class ReadWriteCacheTest {
         "o2QCacheTest", 0);
     segmentConfiguration.fileType = OFileFactory.CLASSIC;
 
-    buffer = new OReadWriteCache(4 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(16 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
 
     long fileId = buffer.openFile(fileName);
     for (int i = 0; i < 8; i++) {

@@ -62,4 +62,11 @@ public class OCacheEntry {
     result = 31 * result + (isDirty ? 1 : 0);
     return result;
   }
+
+  @Override
+  public String toString() {
+    return "{fileId=" + this.fileId + " pageIndex=" + this.pageIndex + " loadedLSN=" + this.loadedLSN + " dataPointer="
+        + this.dataPointer + " usageCounter=" + this.usageCounter + " inReadCache=" + this.inReadCache + " inWriteCache="
+        + this.inWriteCache + " recentlyChanged=" + this.recentlyChanged + " creationTime=" + this.creationTime + "}";
+  }
 }

@@ -23,6 +23,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.orientechnologies.common.directmemory.ODirectMemory;
 import com.orientechnologies.common.serialization.types.OIntegerSerializer;
@@ -39,26 +43,28 @@ import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OWrite
  * @since 14.03.13
  */
 public class OReadWriteCache implements ODiskCache {
-  public static final long              MAGIC_NUMBER = 0xFACB03FEL;
+  public static final long                                MAGIC_NUMBER = 0xFACB03FEL;
 
-  private int                           maxSize;
+  private int                                             maxSize;
 
-  private final int                     pageSize;
+  private final int                                       pageSize;
 
-  private final Map<Long, OFileClassic> files;
+  private final Map<Long, OFileClassic>                   files;
 
   /**
    * Contains all pages in cache for given file, not only dirty onces.
    */
-  private final Map<Long, Set<Long>>    filePages;
+  private final Map<Long, Set<Long>>                      filePages;
 
-  private final Object                  syncObject;
-  private final OStorageLocalAbstract   storageLocal;
+  private final Object                                    syncObject;
+  private final OStorageLocalAbstract                     storageLocal;
 
-  private long                          fileCounter  = 1;
+  private long                                            fileCounter  = 1;
 
-  final private OWoWCache               writeCache;
-  final private O2QCache                readCache;
+  final private OWoWCache                                 writeCache;
+  final private O2QCache                                  readCache;
+
+  final private ConcurrentMap<FileLockKey, ReadWriteLock> entriesLocks;
 
   public OReadWriteCache(long maxMemory, int writeQueueLength, ODirectMemory directMemory, OWriteAheadLog writeAheadLog,
       int pageSize, OStorageLocalAbstract storageLocal, boolean syncOnPageFlush) {
@@ -68,6 +74,7 @@ public class OReadWriteCache implements ODiskCache {
     // TODO concurrent map?
     this.files = new HashMap<Long, OFileClassic>();
     this.filePages = new HashMap<Long, Set<Long>>();
+    this.entriesLocks = new ConcurrentHashMap<FileLockKey, ReadWriteLock>();
 
     long tmpMaxSize = maxMemory / pageSize;
     if (tmpMaxSize >= Integer.MAX_VALUE) {
@@ -76,8 +83,11 @@ public class OReadWriteCache implements ODiskCache {
       maxSize = (int) tmpMaxSize;
     }
 
-    writeCache = new OWoWCache(maxSize >> 4, syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files);
-    readCache = new O2QCache((maxSize - maxSize >> 4), files, filePages, pageSize, directMemory);
+    assert maxSize >= 16;
+
+    writeCache = new OWoWCache(maxSize >> 4, syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files,
+        entriesLocks);
+    readCache = new O2QCache((maxSize - (maxSize >> 4)), files, filePages, pageSize, directMemory, entriesLocks);
 
     syncObject = new Object();
   }
@@ -106,22 +116,33 @@ public class OReadWriteCache implements ODiskCache {
   }
 
   @Override
-  public void markDirty(long fileId, long pageIndex) {
+  public void markDirty(long fileId, long pageIndex) throws IOException {
     synchronized (syncObject) {
       OCacheEntry cacheEntry = readCache.get(fileId, pageIndex);
-      writeCache.load(cacheEntry);
+      writeCache.markDirty(cacheEntry);
     }
   }
 
   @Override
   public long load(long fileId, long pageIndex) throws IOException {
     synchronized (syncObject) {
-      OCacheEntry cacheEntry = readCache.get(fileId, pageIndex);
-      cacheEntry = storeRecordInReadCache(fileId, pageIndex, cacheEntry);
+      FileLockKey fileLock = new FileLockKey(fileId, pageIndex);
+      ReadWriteLock lock = entriesLocks.get(fileLock);
+      if (lock == null) {
+        lock = new ReentrantReadWriteLock();
+        entriesLocks.putIfAbsent(fileLock, lock);
+      }
+      lock.readLock().lock();
+      try {
+        OCacheEntry cacheEntry = readCache.get(fileId, pageIndex);
+        cacheEntry = storeRecordInReadCache(fileId, pageIndex, cacheEntry);
 
-      cacheEntry.usageCounter++;
+        cacheEntry.usageCounter++;
 
-      return cacheEntry.dataPointer;
+        return cacheEntry.dataPointer;
+      } finally {
+        lock.readLock().unlock();
+      }
     }
   }
 
@@ -160,7 +181,7 @@ public class OReadWriteCache implements ODiskCache {
   @Override
   public void flushFile(long fileId) throws IOException {
     synchronized (syncObject) {
-      writeCache.flushFile(fileId);
+      writeCache.flushFile(fileId, true);
     }
   }
 
@@ -176,8 +197,8 @@ public class OReadWriteCache implements ODiskCache {
       if (fileClassic == null || !fileClassic.isOpen())
         return;
 
-      writeCache.closeFile(fileId, filePages, flush);
-      readCache.closeFile(fileId, filePages, flush);
+      readCache.closeFile(fileId, filePages.get(fileId));
+      writeCache.closeFile(fileId, filePages.get(fileId), flush);
 
       fileClassic.close();
     }
@@ -420,5 +441,54 @@ public class OReadWriteCache implements ODiskCache {
 
   public OWoWCache getWriteCache() {
     return writeCache;
+  }
+
+  static final class FileLockKey implements Comparable<FileLockKey> {
+    final long fileId;
+    final long pageIndex;
+
+    FileLockKey(long fileId, long pageIndex) {
+      this.fileId = fileId;
+      this.pageIndex = pageIndex;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o)
+        return true;
+      if (o == null || getClass() != o.getClass())
+        return false;
+
+      FileLockKey that = (FileLockKey) o;
+
+      if (fileId != that.fileId)
+        return false;
+      if (pageIndex != that.pageIndex)
+        return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = (int) (fileId ^ (fileId >>> 32));
+      result = 31 * result + (int) (pageIndex ^ (pageIndex >>> 32));
+      return result;
+    }
+
+    @Override
+    public int compareTo(FileLockKey otherKey) {
+      if (fileId > otherKey.fileId)
+        return 1;
+      if (fileId < otherKey.fileId)
+        return -1;
+
+      if (pageIndex > otherKey.pageIndex)
+        return 1;
+      if (pageIndex < otherKey.pageIndex)
+        return -1;
+
+      return 0;
+    }
   }
 }
