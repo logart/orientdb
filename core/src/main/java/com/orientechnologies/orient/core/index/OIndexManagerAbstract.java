@@ -136,9 +136,9 @@ public abstract class OIndexManagerAbstract extends ODocumentWrapperNoClass impl
         } catch (OConcurrentModificationException e) {
           reload(null, true);
         }
-      
+
       return (RET) super.save();
-      
+
     } finally {
       releaseExclusiveLock();
     }
@@ -234,7 +234,8 @@ public abstract class OIndexManagerAbstract extends ODocumentWrapperNoClass impl
   }
 
   private OIndex<?> createDictionary() {
-    return createIndex(DICTIONARY_NAME, OClass.INDEX_TYPE.DICTIONARY.toString(), new OSimpleKeyIndexDefinition(OType.STRING), null, null);
+    return createIndex(DICTIONARY_NAME, OClass.INDEX_TYPE.DICTIONARY.toString(), new OSimpleKeyIndexDefinition(OType.STRING), null,
+        null);
   }
 
   public ODocument getConfiguration() {

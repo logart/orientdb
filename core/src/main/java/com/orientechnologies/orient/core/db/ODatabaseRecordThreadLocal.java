@@ -47,7 +47,7 @@ public class ODatabaseRecordThreadLocal extends ThreadLocal<ODatabaseRecord> {
   public void remove() {
     super.remove();
   }
-  
+
   @Override
   public void set(final ODatabaseRecord value) {
     super.set(value);

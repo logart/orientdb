@@ -103,7 +103,8 @@ public abstract class OSQLFilterItemAbstract implements OSQLFilterItem {
           operationsChain.add(new OPair<OSQLMethod, Object[]>(method, arguments));
 
         } else {
-          operationsChain.add(new OPair<OSQLMethod, Object[]>(OSQLHelper.getMethodByName(OSQLMethodField.NAME), new Object[] { part }));
+          operationsChain.add(new OPair<OSQLMethod, Object[]>(OSQLHelper.getMethodByName(OSQLMethodField.NAME),
+              new Object[] { part }));
         }
       }
     }

@@ -68,7 +68,7 @@ public abstract class OCommandExecutorAbstract extends OBaseParser implements OC
   public Map<Object, Object> getParameters() {
     return parameters;
   }
-  
+
   @Override
   public String getFetchPlan() {
     return null;

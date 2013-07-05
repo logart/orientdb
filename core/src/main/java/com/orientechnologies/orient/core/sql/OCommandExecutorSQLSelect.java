@@ -1297,7 +1297,7 @@ public class OCommandExecutorSQLSelect extends OCommandExecutorSQLResultsetAbstr
 
     parserNextWord(true);
     fetchPlan = OStringSerializerHelper.getStringContent(parserGetLastWord());
-    request.setFetchPlan( fetchPlan );
+    request.setFetchPlan(fetchPlan);
 
     return true;
   }

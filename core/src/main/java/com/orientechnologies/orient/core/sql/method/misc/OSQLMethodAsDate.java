@@ -16,11 +16,12 @@
  */
 package com.orientechnologies.orient.core.sql.method.misc;
 
+import java.text.ParseException;
+import java.util.Date;
+
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import java.text.ParseException;
-import java.util.Date;
 
 /**
  * 

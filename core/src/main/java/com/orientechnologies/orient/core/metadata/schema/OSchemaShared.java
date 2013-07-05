@@ -487,7 +487,8 @@ public class OSchemaShared extends ODocumentWrapperNoClass implements OSchema, O
         if (schemaVersion == null) {
           OLogManager
               .instance()
-              .error(this,
+              .error(
+                  this,
                   "Database's schema is empty! Recreating the system classes and allow the opening of the database but double check the integrity of the database");
           return null;
         } else if (schemaVersion.intValue() != CURRENT_VERSION_NUMBER) {

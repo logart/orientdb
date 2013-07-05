@@ -142,8 +142,9 @@ public class OServer {
     startup(loadConfigurationFromFile(iConfigurationFile));
   }
 
-  public OServer startup(final String iConfiguration) throws InstantiationException, IllegalAccessException, ClassNotFoundException,
-      IllegalArgumentException, SecurityException, InvocationTargetException, NoSuchMethodException, IOException {
+  public OServer startup(final String iConfiguration) throws InstantiationException, IllegalAccessException,
+      ClassNotFoundException, IllegalArgumentException, SecurityException, InvocationTargetException, NoSuchMethodException,
+      IOException {
     return startup(new ByteArrayInputStream(iConfiguration.getBytes()));
   }
 
@@ -183,7 +184,7 @@ public class OServer {
     databaseDirectory = contextConfiguration.getValue("server.database.path", "${" + Orient.ORIENTDB_HOME + "}/databases/");
     databaseDirectory = OSystemVariableResolver.resolveSystemVariables(databaseDirectory);
     databaseDirectory = databaseDirectory.replace("//", "/");
-    
+
     return this;
   }
 
@@ -208,7 +209,7 @@ public class OServer {
 
     OLogManager.instance().info(this, "OrientDB Server v" + OConstants.ORIENT_VERSION + " is active.");
     startupLatch.countDown();
-    
+
     return this;
   }
 
