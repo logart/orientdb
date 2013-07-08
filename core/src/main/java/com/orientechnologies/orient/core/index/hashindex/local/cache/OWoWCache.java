@@ -13,6 +13,10 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -46,10 +50,26 @@ class OWoWCache {
 
   private final int                                                             maxSize;
   private final ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> cache;
+  private static final double                                                   THRESHOLD1       = 0.5;
+  private static final double                                                   THRESHOLD2       = 0.9;
   private Map<Long, Long>                                                       currentFlushPointer;
 
   private static final long                                                     WRITE_GROUP_SIZE = 4;
   private final ConcurrentMap<OReadWriteCache.FileLockKey, ReadWriteLock>       entriesLocks;
+  private int                                                                   commitDelay      = 1;
+  private ScheduledExecutorService                                              commitExecutor   = Executors
+                                                                                                     .newSingleThreadScheduledExecutor(new ThreadFactory() {
+                                                                                                       @Override
+                                                                                                       public Thread newThread(
+                                                                                                           Runnable r) {
+                                                                                                         Thread thread = new Thread(
+                                                                                                             r);
+                                                                                                         thread.setDaemon(true);
+                                                                                                         thread
+                                                                                                             .setName("Disk-cache Flush Task");
+                                                                                                         return thread;
+                                                                                                       }
+                                                                                                     });
 
   OWoWCache(int maxSize, boolean syncOnPageFlush, OWriteAheadLog writeAheadLog, ODirectMemory directMemory, int pageSize,
       int writeQueueLength, Map<Long, OFileClassic> files, ConcurrentMap<OReadWriteCache.FileLockKey, ReadWriteLock> entriesLocks) {
@@ -344,5 +364,25 @@ class OWoWCache {
 
   ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> getCache() {
     return cache;
+  }
+
+  public void startFlush() {
+    if (commitDelay > 0)
+      commitExecutor.scheduleAtFixedRate(new FlushTask(), commitDelay, commitDelay, TimeUnit.MILLISECONDS);
+  }
+
+  private final class FlushTask implements Runnable {
+
+    @Override
+    public void run() {
+      double threshold = ((double) cache.size()) / maxSize;
+      if (threshold > THRESHOLD1) {
+        flushOne();
+      } else if (threshold > THRESHOLD2) {
+        flushOne();
+      } else {
+        forceFlush();
+      }
+    }
   }
 }

@@ -87,9 +87,11 @@ public class OReadWriteCache implements ODiskCache {
 
     writeCache = new OWoWCache(maxSize >> 4, syncOnPageFlush, writeAheadLog, directMemory, pageSize, writeQueueLength, files,
         entriesLocks);
+
     readCache = new O2QCache((maxSize - (maxSize >> 4)), files, filePages, pageSize, directMemory, entriesLocks);
 
     syncObject = new Object();
+    writeCache.startFlush();
   }
 
   @Override
