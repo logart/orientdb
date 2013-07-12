@@ -129,11 +129,8 @@ public class OReadWriteCache implements ODiskCache {
   public long load(long fileId, long pageIndex) throws IOException {
     synchronized (syncObject) {
       FileLockKey fileLock = new FileLockKey(fileId, pageIndex);
+      entriesLocks.putIfAbsent(fileLock, new ReentrantReadWriteLock());
       ReadWriteLock lock = entriesLocks.get(fileLock);
-      if (lock == null) {
-        lock = new ReentrantReadWriteLock();
-        entriesLocks.putIfAbsent(fileLock, lock);
-      }
       lock.readLock().lock();
       try {
         OCacheEntry cacheEntry = readCache.get(fileId, pageIndex);
@@ -169,7 +166,8 @@ public class OReadWriteCache implements ODiskCache {
       if (lruEntry != null)
         lruEntry.usageCounter--;
       else
-        throw new IllegalStateException("record should be released is already free!");
+        throw new IllegalStateException("Record that should be released (fileId = " + fileId + ", pageIndex = " + pageIndex
+            + ") is not in cache!");
     }
   }
 
@@ -183,7 +181,7 @@ public class OReadWriteCache implements ODiskCache {
   @Override
   public void flushFile(long fileId) throws IOException {
     synchronized (syncObject) {
-      writeCache.flushFile(fileId, true);
+      writeCache.flushFile(fileId);
     }
   }
 

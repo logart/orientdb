@@ -92,7 +92,6 @@ class O2QCache {
     lock.readLock().lock();
     try {
       OCacheEntry cacheEntry = updateCache(entry.fileId, entry.pageIndex, entry.dataPointer);
-      entry.usageCounter++;
       entry.inReadCache = true;
       return cacheEntry;
     } finally {
@@ -116,7 +115,7 @@ class O2QCache {
 
     lruEntry = a1out.remove(fileId, pageIndex);
     if (lruEntry != null) {
-      putEntryToLongLeaveCache(lruEntry);
+      return putEntryToLongLeaveCache(lruEntry);
     }
 
     lruEntry = a1in.get(fileId, pageIndex);
@@ -147,7 +146,6 @@ class O2QCache {
   }
 
   private OCacheEntry putRecordToShortLeaveCache(long fileId, long pageIndex, long dataPointer) throws IOException {
-    OCacheEntry cacheEntry;
     removeColdestPageIfNeeded();
 
     if (dataPointer == ODirectMemory.NULL_POINTER) {
@@ -156,8 +154,7 @@ class O2QCache {
 
     OLogSequenceNumber lsn = OLSNHelper.getLogSequenceNumberFromPage(dataPointer, directMemory);
 
-    cacheEntry = a1in.putToMRU(fileId, pageIndex, dataPointer, lsn);
-    return cacheEntry;
+    return a1in.putToMRU(fileId, pageIndex, dataPointer, lsn);
   }
 
   private long cacheFileContent(long fileId, long pageIndex) throws IOException {

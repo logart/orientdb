@@ -19,10 +19,6 @@ public class OCacheEntry {
 
   private final long       creationTime;
 
-  // TODO remove
-  @Deprecated
-  volatile boolean         isDirty;
-
   public OCacheEntry(long fileId, long pageIndex, OLogSequenceNumber loadedLSN) {
     this.fileId = fileId;
     this.pageIndex = pageIndex;
@@ -43,8 +39,6 @@ public class OCacheEntry {
       return false;
     if (fileId != that.fileId)
       return false;
-    if (isDirty != that.isDirty)
-      return false;
     if (pageIndex != that.pageIndex)
       return false;
     if (loadedLSN != null ? !loadedLSN.equals(that.loadedLSN) : that.loadedLSN != null)
@@ -59,7 +53,6 @@ public class OCacheEntry {
     result = 31 * result + (int) (pageIndex ^ (pageIndex >>> 32));
     result = 31 * result + (loadedLSN != null ? loadedLSN.hashCode() : 0);
     result = 31 * result + (int) (dataPointer ^ (dataPointer >>> 32));
-    result = 31 * result + (isDirty ? 1 : 0);
     return result;
   }
 

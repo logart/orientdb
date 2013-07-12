@@ -95,7 +95,7 @@ public class WoWCacheTest {
     File file = new File(storageLocal.getConfiguration().getDirectory() + "/o2QCacheTest.tst");
     if (file.exists()) {
       Assert.assertTrue(file.delete());
-      file.getParentFile().delete();
+      Assert.assertTrue(file.getParentFile().delete());
     }
 
   }
@@ -135,7 +135,7 @@ public class WoWCacheTest {
     for (OCacheEntry value : values) {
       Assert.assertTrue(value.recentlyChanged);
     }
-    writeCache.flushFile(fileId, true);
+    writeCache.flushFile(fileId);
     for (OCacheEntry value : values) {
       Assert.assertFalse(value.recentlyChanged);
     }
@@ -154,7 +154,7 @@ public class WoWCacheTest {
     }
     HashMap<OReadWriteCache.FileLockKey, OCacheEntry> cacheSnapshot = new HashMap<OReadWriteCache.FileLockKey, OCacheEntry>(
         internalCache);
-    writeCache.flushFile(fileId, true);
+    writeCache.flushFile(fileId);
     for (int i = 0; i < 16; i += 8) {
       OCacheEntry cacheEntry = cacheSnapshot.get(new OReadWriteCache.FileLockKey(fileId, i));
       Assert.assertFalse(cacheEntry.recentlyChanged);
@@ -176,7 +176,7 @@ public class WoWCacheTest {
     for (OCacheEntry value : values) {
       Assert.assertTrue(value.recentlyChanged);
     }
-    writeCache.flushFile(fileId, true);
+    writeCache.flushFile(fileId);
     for (OCacheEntry value : values) {
       Assert.assertFalse(value.recentlyChanged);
     }

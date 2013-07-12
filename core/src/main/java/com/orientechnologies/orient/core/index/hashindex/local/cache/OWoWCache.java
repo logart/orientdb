@@ -60,16 +60,16 @@ class OWoWCache {
   private int                                                                   commitDelay      = 1;
   private ScheduledExecutorService                                              commitExecutor   = Executors
                                                                                                      .newSingleThreadScheduledExecutor(new ThreadFactory() {
-                                                                                                         @Override
-                                                                                                         public Thread newThread(
-                                                                                                                 Runnable r) {
-                                                                                                             Thread thread = new Thread(
-                                                                                                                     r);
-                                                                                                             thread.setDaemon(true);
-                                                                                                             thread
-                                                                                                                     .setName("Disk-cache Flush Task");
-                                                                                                             return thread;
-                                                                                                         }
+                                                                                                       @Override
+                                                                                                       public Thread newThread(
+                                                                                                           Runnable r) {
+                                                                                                         Thread thread = new Thread(
+                                                                                                             r);
+                                                                                                         thread.setDaemon(true);
+                                                                                                         thread
+                                                                                                             .setName("Disk-cache Flush Task");
+                                                                                                         return thread;
+                                                                                                       }
                                                                                                      });
   private volatile long                                                         oldChanges;
   private volatile long                                                         currentChanges;
@@ -164,14 +164,13 @@ class OWoWCache {
   }
 
   private void doMarkDirty(OCacheEntry cacheEntry) {
-    if (cacheEntry.inWriteCache || cacheEntry.isDirty)
+    if (cacheEntry.inWriteCache)
       return;
 
     dirtyPages.get(cacheEntry.fileId).put(cacheEntry.pageIndex, cacheEntry.loadedLSN);
 
     cacheEntry.recentlyChanged = true;
     cacheEntry.inWriteCache = true;
-    cacheEntry.isDirty = true;
   }
 
   public void clear() {
@@ -228,10 +227,19 @@ class OWoWCache {
         try {
           for (OReadWriteCache.FileLockKey fileLockKey : keysToFlush) {
             OCacheEntry cacheEntry = cache.get(fileLockKey);
-            flushData(cacheEntry);
-            cacheEntry.isDirty = false;
-            cacheEntry.inWriteCache = false;
-            cache.remove(fileLockKey);
+            entriesLocks.putIfAbsent(fileLockKey, new ReentrantReadWriteLock());
+            ReadWriteLock lock = entriesLocks.get(fileLockKey);
+            lock.readLock().lock();
+            try {
+              if (cacheEntry.usageCounter != 0) {
+                throw new OBlockedPageException("Unable to perform flush file because some pages is in use.");
+              }
+              flushData(cacheEntry);
+              cacheEntry.inWriteCache = false;
+              cache.remove(fileLockKey);
+            } finally {
+              lock.readLock().unlock();
+            }
           }
           OFileClassic fileClassic = files.get(keysToFlush.get(0).fileId);
           fileClassic.synch();
@@ -354,9 +362,10 @@ class OWoWCache {
       OCacheEntry lruEntry = get(fileId, pageIndex);
       if (lruEntry != null) {
         if (lruEntry.usageCounter == 0) {
-          // lruEntry = remove(fileId, pageIndex);
-
-          flushData(lruEntry);
+          cache.remove(new OReadWriteCache.FileLockKey(fileId, pageIndex));
+          if (flush) {
+            flushData(lruEntry);
+          }
           fileDirtyPages.remove(pageIndex);
 
           directMemory.free(lruEntry.dataPointer);
@@ -391,9 +400,40 @@ class OWoWCache {
     }
   }
 
-  public void flushFile(long fileId, boolean forceFlush) {
-    // todo implement method
-    // To change body of created methods use File | Settings | File Templates.
+  public void flushFile(long fileId) throws IOException {
+    final OFileClassic fileClassic = files.get(fileId);
+    if (fileClassic == null || !fileClassic.isOpen())
+      return;
+    List<OReadWriteCache.FileLockKey> keysToFlush = lockFilePages(fileId);
+    // flush
+    try {
+      for (OReadWriteCache.FileLockKey fileLockKey : keysToFlush) {
+        OCacheEntry cacheEntry = cache.get(fileLockKey);
+        if (cacheEntry.usageCounter != 0) {
+          throw new OBlockedPageException("Unable to perform flush file because some pages is in use.");
+        }
+        flushData(cacheEntry);
+        cacheEntry.inWriteCache = false;
+        cache.remove(fileLockKey);
+      }
+    } finally {
+      unlockWriteGroup(keysToFlush);
+    }
+    fileClassic.synch();
+  }
+
+  private List<OReadWriteCache.FileLockKey> lockFilePages(final long fileId) {
+    OReadWriteCache.FileLockKey firstKey = new OReadWriteCache.FileLockKey(fileId, 0);
+    OReadWriteCache.FileLockKey fileLockKey = cache.ceilingKey(firstKey);
+    List<OReadWriteCache.FileLockKey> result = new ArrayList<OReadWriteCache.FileLockKey>(cache.size());
+    while (fileLockKey != null && fileLockKey.fileId == fileId) {
+      entriesLocks.putIfAbsent(fileLockKey, new ReentrantReadWriteLock());
+      ReadWriteLock lock = entriesLocks.get(fileLockKey);
+      lock.writeLock().lock();
+      result.add(fileLockKey);
+      fileLockKey = cache.higherKey(fileLockKey);
+    }
+    return result;
   }
 
   private final class FlushTask implements Runnable {
