@@ -255,7 +255,7 @@ public class ReadWriteCacheTest {
     Assert.assertEquals(a1out.size(), 7);
 
     for (int i = 0; i < 7; i++) {
-      OCacheEntry lruEntry = generateEntry(fileId, i, pointers[i], true, new OLogSequenceNumber(0, 0));
+      OCacheEntry lruEntry = generateEntry(fileId, i, pointers[i], false, new OLogSequenceNumber(1, i));
       Assert.assertEquals(am.get(fileId, i), lruEntry);
     }
 
@@ -537,8 +537,6 @@ public class ReadWriteCacheTest {
 
     for (int i = 0; i < 16; i++) {
       pointers[i] = buffer.load(fileId, i);
-      buffer.markDirty(fileId, i);
-      directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, 7 }, 0, 8);
     }
 
     for (int i = 0; i < 16; i++) {
@@ -561,15 +559,11 @@ public class ReadWriteCacheTest {
 
     for (int i = 0; i < 6; i++) {
       pointers[i] = buffer.load(fileId, i);
-      buffer.markDirty(fileId, i);
-      directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, 7 }, 0, 8);
       buffer.release(fileId, i);
     }
 
     for (int i = 0; i < 4; i++) {
       pointers[i] = buffer.load(fileId, i);
-      buffer.markDirty(fileId, i);
-      directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, 7 }, 0, 8);
     }
 
     for (int i = 0; i < 4; i++) {
@@ -593,8 +587,6 @@ public class ReadWriteCacheTest {
     try {
       for (int i = 0; i < 16; i++) {
         pointers[i] = buffer.load(fileId, i);
-        buffer.markDirty(fileId, i);
-        directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, 7 }, 0, 8);
       }
     } finally {
       for (int i = 0; i < 15; i++) {
@@ -740,7 +732,7 @@ public class ReadWriteCacheTest {
         "o2QCacheTest", 0);
     segmentConfiguration.fileType = OFileFactory.CLASSIC;
 
-    buffer = new OReadWriteCache(16 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(64 * (8 + systemOffset), 2, directMemory, writeAheadLog, 8 + systemOffset, storageLocal, true);
 
     long fileId = buffer.openFile(fileName);
     for (int i = 0; i < 8; i++) {
@@ -769,7 +761,7 @@ public class ReadWriteCacheTest {
 
     Set<ODirtyPage> dirtyPages = buffer.logDirtyPagesTable();
     Set<ODirtyPage> expectedDirtyPages = new HashSet<ODirtyPage>();
-    for (int i = 7; i >= 2; i--)
+    for (int i = 7; i >= 4; i--)
       expectedDirtyPages.add(new ODirtyPage("o2QCacheTest.tst", i, pageLSN));
 
     Assert.assertEquals(dirtyPages, expectedDirtyPages);
@@ -837,6 +829,7 @@ public class ReadWriteCacheTest {
     OCacheEntry entry = new OCacheEntry(fileId, pageIndex, lsn);
     entry.dataPointer = pointer;
     entry.inWriteCache = inWriteCache;
+    entry.inReadCache = true;
     return entry;
   }
 

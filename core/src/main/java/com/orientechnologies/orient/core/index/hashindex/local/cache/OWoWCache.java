@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -139,6 +140,9 @@ class OWoWCache {
     OReadWriteCache.FileLockKey fileLockKey = new OReadWriteCache.FileLockKey(cachedEntry.fileId, cachedEntry.pageIndex);
     OCacheEntry result = cache.get(fileLockKey);
     if (result == null) {
+      if (cache.size() >= maxSize) {
+        flushOne(true);
+      }
       cache.put(fileLockKey, cachedEntry);
       result = cachedEntry;
     }
@@ -284,7 +288,7 @@ class OWoWCache {
   }
 
   private Map<OReadWriteCache.FileLockKey, OCacheEntry> getWriteGroup(final OReadWriteCache.FileLockKey writeGroupFirstPage) {
-    Map<OReadWriteCache.FileLockKey, OCacheEntry> entriesToFlush = new HashMap<OReadWriteCache.FileLockKey, OCacheEntry>(16);
+    Map<OReadWriteCache.FileLockKey, OCacheEntry> entriesToFlush = new LinkedHashMap<OReadWriteCache.FileLockKey, OCacheEntry>(16);
     Map.Entry<OReadWriteCache.FileLockKey, OCacheEntry> entryToFlush = cache.ceilingEntry(writeGroupFirstPage);
     while (isNextPageInGroupExists(writeGroupFirstPage, entryToFlush)) {
       entriesToFlush.put(entryToFlush.getKey(), entryToFlush.getValue());
@@ -319,6 +323,8 @@ class OWoWCache {
 
     if (syncOnPageFlush)
       fileClassic.synch();
+
+    dirtyPages.get(cacheEntry.fileId).remove(cacheEntry.pageIndex);
   }
 
   private void unlockWriteGroup(List<OReadWriteCache.FileLockKey> keysToUnlock) {
@@ -393,7 +399,7 @@ class OWoWCache {
     OReadWriteCache.FileLockKey potentialNextPointer = new OReadWriteCache.FileLockKey(flushPointer.fileId,
         flushPointer.pageIndex + 16);
     OReadWriteCache.FileLockKey key = cache.higherKey(potentialNextPointer);
-    if (key.fileId == flushPointer.fileId) {
+    if (key == null || key.fileId == flushPointer.fileId) {
       return potentialNextPointer;
     } else {
       return key;
