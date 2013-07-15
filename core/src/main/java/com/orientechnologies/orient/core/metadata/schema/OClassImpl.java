@@ -822,7 +822,7 @@ public class OClassImpl extends ODocumentWrapperNoClass implements OClass {
         // if the cluster is inaccessible it's simply not processed in the list.add
       }
     }
-    
+
     if (all)
       // JUST RETURN INPUT ARRAY (FASTER)
       return iClusterIds;
@@ -917,7 +917,7 @@ public class OClassImpl extends ODocumentWrapperNoClass implements OClass {
    * @see #isSubClassOf(OClass)
    */
   public boolean isSuperClassOf(final OClass iClass) {
-    if( iClass == null )
+    if (iClass == null)
       return false;
     return iClass.isSubClassOf(this);
   }
