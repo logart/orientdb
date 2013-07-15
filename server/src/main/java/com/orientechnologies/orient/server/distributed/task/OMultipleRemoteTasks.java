@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.orientechnologies.orient.server.task;
+package com.orientechnologies.orient.server.distributed.task;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -21,7 +21,8 @@ import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.orientechnologies.common.log.OLogManager;
+import com.orientechnologies.orient.server.OServer;
+import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager.EXECUTION_MODE;
 
 /**
@@ -30,26 +31,28 @@ import com.orientechnologies.orient.server.distributed.ODistributedServerManager
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OMultipleDistributedTasks extends OAbstractDistributedTask<Object[]> {
-  private static final long                 serialVersionUID = 1L;
-  private List<OAbstractDistributedTask<?>> tasks            = new ArrayList<OAbstractDistributedTask<?>>();
+public class OMultipleRemoteTasks extends OAbstractRemoteTask<Object[]> {
+  private static final long                serialVersionUID = 1L;
+  private List<OAbstractReplicatedTask<?>> tasks            = new ArrayList<OAbstractReplicatedTask<?>>();
 
-  public OMultipleDistributedTasks() {
+  public OMultipleRemoteTasks() {
   }
 
-  public OMultipleDistributedTasks(final String nodeSource, final String iDbName, final EXECUTION_MODE iMode) {
-    super(nodeSource, iDbName, iMode);
+  public OMultipleRemoteTasks(final OServer iServer, final ODistributedServerManager iDistributedSrvMgr, final String iDbName,
+      final EXECUTION_MODE iMode) {
+    super(iServer, iDistributedSrvMgr, iDbName, iMode);
   }
 
   @Override
   public Object[] call() throws Exception {
-    OLogManager.instance().info(this, "DISTRIBUTED <-[%s/%s] executing group of %d command(s)", nodeSource, databaseName,
-        tasks.size());
-
     final Object[] result = new Object[tasks.size()];
 
     for (int i = 0; i < tasks.size(); ++i) {
-      final OAbstractDistributedTask<?> task = tasks.get(i);
+      final OAbstractRemoteTask<?> task = tasks.get(i);
+
+      // RESET QUEUE TO AVOID HOLES
+      serverInstance.getDistributedManager().resetOperationQueue(task.getRunId(), task.getOperationSerial() - 1);
+
       result[i] = task.call();
     }
 
@@ -70,7 +73,7 @@ public class OMultipleDistributedTasks extends OAbstractDistributedTask<Object[]
     super.readExternal(in);
     final int taskSize = in.readInt();
     for (int i = 0; i < taskSize; ++i)
-      tasks.add((OAbstractDistributedTask<?>) in.readObject());
+      tasks.add((OAbstractReplicatedTask<?>) in.readObject());
   }
 
   @Override
@@ -78,11 +81,29 @@ public class OMultipleDistributedTasks extends OAbstractDistributedTask<Object[]
     return "multiple_requests";
   }
 
+  @Override
+  public void setNodeDestination(final String masterNodeId) {
+    super.setNodeDestination(masterNodeId);
+    if (tasks != null)
+      for (OAbstractReplicatedTask<?> t : tasks) {
+        t.setNodeDestination(masterNodeId);
+      }
+  }
+
+  @Override
+  public void setNodeSource(final String nodeSource) {
+    super.setNodeSource(nodeSource);
+    if (tasks != null)
+      for (OAbstractReplicatedTask<?> t : tasks) {
+        t.setNodeSource(nodeSource);
+      }
+  }
+
   public int getTasks() {
     return tasks.size();
   }
 
-  public void addTask(final OAbstractDistributedTask<?> operation) {
+  public void addTask(final OAbstractReplicatedTask<?> operation) {
     tasks.add(operation);
   }
 
@@ -90,7 +111,7 @@ public class OMultipleDistributedTasks extends OAbstractDistributedTask<Object[]
     tasks.clear();
   }
 
-  public OAbstractDistributedTask<?> getTask(final int i) {
+  public OAbstractReplicatedTask<?> getTask(final int i) {
     return tasks.get(i);
   }
 }

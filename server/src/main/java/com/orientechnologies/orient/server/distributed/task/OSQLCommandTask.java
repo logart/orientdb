@@ -13,19 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.orientechnologies.orient.server.task;
+package com.orientechnologies.orient.server.distributed.task;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
+import com.orientechnologies.orient.server.OServer;
+import com.orientechnologies.orient.server.distributed.ODistributedServerLog;
+import com.orientechnologies.orient.server.distributed.ODistributedServerLog.DIRECTION;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager.EXECUTION_MODE;
-import com.orientechnologies.orient.server.distributed.ODistributedThreadLocal;
-import com.orientechnologies.orient.server.distributed.OServerOfflineException;
+import com.orientechnologies.orient.server.distributed.conflict.OReplicationConflictResolver;
+import com.orientechnologies.orient.server.journal.ODatabaseJournal.OPERATION_TYPES;
 
 /**
  * Distributed task used for synchronization.
@@ -33,39 +35,44 @@ import com.orientechnologies.orient.server.distributed.OServerOfflineException;
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OSQLCommandDistributedTask extends OAbstractDistributedTask<Object> {
+public class OSQLCommandTask extends OAbstractReplicatedTask<Object> {
   private static final long serialVersionUID = 1L;
 
   protected String          text;
 
-  public OSQLCommandDistributedTask() {
+  public OSQLCommandTask() {
   }
 
-  public OSQLCommandDistributedTask(final String nodeSource, final String databaseName, final EXECUTION_MODE iMode,
-      final String iCommand) {
-    super(nodeSource, databaseName, iMode);
+  public OSQLCommandTask(final OServer iServer, final ODistributedServerManager iDistributedSrvMgr, final String databaseName,
+      final EXECUTION_MODE iMode, final String iCommand) {
+    super(iServer, iDistributedSrvMgr, databaseName, iMode);
     text = iCommand;
   }
 
-  public OSQLCommandDistributedTask(final long iRunId, final long iOperationId, final String iCommand) {
+  public OSQLCommandTask(final long iRunId, final long iOperationId, final String iCommand) {
     text = iCommand;
   }
 
+  /**
+   * Handles conflict between local and remote execution results.
+   * 
+   * @param localResult
+   *          The result on local node
+   * @param remoteResult
+   *          the result on remote node
+   */
   @Override
-  public Object call() throws Exception {
-    if (OLogManager.instance().isDebugEnabled())
-      OLogManager.instance().debug(this, "DISTRIBUTED <- command: %s", text.toString());
+  public void handleConflict(final String iRemoteNodeId, final Object localResult, final Object remoteResult) {
+    final OReplicationConflictResolver resolver = getDatabaseSynchronizer().getConflictResolver();
+    resolver.handleCommandConflict(iRemoteNodeId, text, localResult, remoteResult);
+  }
 
-    final ODistributedServerManager dManager = getDistributedServerManager();
-    if (status != STATUS.ALIGN && !dManager.checkStatus("online") && !nodeSource.equals(dManager.getLocalNodeId()))
-      // NODE NOT ONLINE, REFUSE THE OPEPRATION
-      throw new OServerOfflineException(dManager.getLocalNodeId(), dManager.getStatus(),
-          "Cannot execute the operation because the server is offline: current status: " + dManager.getStatus());
+  public Object executeOnLocalNode() {
+    ODistributedServerLog.debug(this, getDistributedServerManager().getLocalNodeId(), getNodeSource(), DIRECTION.IN,
+        "execute command=%s db=%s", text.toString(), databaseName);
 
     final ODatabaseDocumentTx db = openDatabase();
-    ODistributedThreadLocal.INSTANCE.distributedExecution = true;
     try {
-
       Object result = openDatabase().command(new OCommandSQL(text)).execute();
 
       if (mode != EXECUTION_MODE.FIRE_AND_FORGET)
@@ -75,7 +82,6 @@ public class OSQLCommandDistributedTask extends OAbstractDistributedTask<Object>
       return null;
 
     } finally {
-      ODistributedThreadLocal.INSTANCE.distributedExecution = false;
       closeDatabase(db);
     }
   }
@@ -100,5 +106,15 @@ public class OSQLCommandDistributedTask extends OAbstractDistributedTask<Object>
   @Override
   public String toString() {
     return getName() + "(" + text + ")";
+  }
+
+  @Override
+  public OPERATION_TYPES getOperationType() {
+    return OPERATION_TYPES.SQL_COMMAND;
+  }
+
+  @Override
+  public String getPayload() {
+    return text;
   }
 }

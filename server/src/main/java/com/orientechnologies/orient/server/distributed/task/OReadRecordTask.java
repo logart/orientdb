@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.orientechnologies.orient.server.task;
+package com.orientechnologies.orient.server.distributed.task;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -23,36 +23,32 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.storage.ORawBuffer;
-import com.orientechnologies.orient.core.version.OVersionFactory;
+import com.orientechnologies.orient.server.OServer;
+import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager.EXECUTION_MODE;
-import com.orientechnologies.orient.server.distributed.OStorageSynchronizer;
-import com.orientechnologies.orient.server.journal.ODatabaseJournal.OPERATION_TYPES;
 
 /**
- * Distributed read record task used for synchronization.
+ * Execute a read of a record from a distributed node.
  * 
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public class OReadRecordDistributedTask extends OAbstractRecordDistributedTask<ORawBuffer> {
+public class OReadRecordTask extends OAbstractRemoteTask<ORawBuffer> {
   private static final long serialVersionUID = 1L;
 
-  public OReadRecordDistributedTask() {
-    executionType = EXEC_TYPE.LOCAL_ONLY;
+  protected ORecordId       rid;
+
+  public OReadRecordTask() {
   }
 
-  public OReadRecordDistributedTask(final String nodeSource, final String iDbName, final ORecordId iRid) {
-    super(nodeSource, iDbName, EXECUTION_MODE.SYNCHRONOUS, iRid, OVersionFactory.instance().createUntrackedVersion());
-    executionType = EXEC_TYPE.LOCAL_ONLY;
-  }
-
-  public OReadRecordDistributedTask(final long iRunId, final long iOperationId, final ORecordId iRid) {
-    super(iRunId, iOperationId, iRid, OVersionFactory.instance().createUntrackedVersion());
-    executionType = EXEC_TYPE.LOCAL_ONLY;
+  public OReadRecordTask(final OServer iServer, final ODistributedServerManager iDistributedSrvMgr,
+      final String iDbName, final ORecordId iRid) {
+    super(iServer, iDistributedSrvMgr, iDbName, EXECUTION_MODE.SYNCHRONOUS);
+    rid = iRid;
   }
 
   @Override
-  protected ORawBuffer executeOnLocalNode(final OStorageSynchronizer dbSynchronizer) {
+  public ORawBuffer call() throws Exception {
     final ODatabaseDocumentTx database = openDatabase();
     try {
       final ORecordInternal<?> record = database.load(rid);
@@ -81,10 +77,5 @@ public class OReadRecordDistributedTask extends OAbstractRecordDistributedTask<O
   @Override
   public String getName() {
     return "record_read";
-  }
-
-  @Override
-  protected OPERATION_TYPES getOperationType() {
-    return null;
   }
 }

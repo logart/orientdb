@@ -616,6 +616,11 @@ public class OSchemaShared extends ODocumentWrapperNoClass implements OSchema, O
     db.getStorage().getConfiguration().update();
   }
 
+  public void close() {
+    classes.clear();
+    document.clear();
+  }
+
   public void saveInternal() {
     final ODatabaseRecord db = getDatabase();
 
@@ -683,11 +688,6 @@ public class OSchemaShared extends ODocumentWrapperNoClass implements OSchema, O
 
   private ODatabaseRecord getDatabase() {
     return ODatabaseRecordThreadLocal.INSTANCE.get();
-  }
-
-  public void close() {
-    classes.clear();
-    document.clear();
   }
 
   private void saveInternal(final String iClusterName) {

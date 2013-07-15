@@ -32,6 +32,7 @@ import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OContextConfiguration;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.serialization.serializer.OStringSerializerHelper;
+import com.orientechnologies.orient.server.OClientConnectionManager;
 import com.orientechnologies.orient.server.OServer;
 import com.orientechnologies.orient.server.config.OServerCommandConfiguration;
 import com.orientechnologies.orient.server.config.OServerParameterConfiguration;
@@ -69,7 +70,7 @@ public class OServerNetworkListener extends Thread {
           statefulCommands.add(iCommands[i]);
         else
           // EARLY CREATE STATELESS COMMAND
-          statelessCommands.add(createCommand(iCommands[i]));
+          statelessCommands.add(OServerNetworkListener.createCommand(server, iCommands[i]));
       }
     }
 
@@ -140,6 +141,18 @@ public class OServerNetworkListener extends Thread {
         try {
           // listen for and accept a client connection to serverSocket
           final Socket socket = serverSocket.accept();
+
+          final int conns = OClientConnectionManager.instance().getTotal();
+          if (conns >= OGlobalConfiguration.NETWORK_MAX_CONCURRENT_SESSIONS.getValueAsInteger()) {
+            // MAXIMUM OF CONNECTIONS EXCEEDED
+            OLogManager.instance().warn(this,
+                "Reached maximum number of concurrent connections (%d), reject incoming connection from %s", conns,
+                socket.getRemoteSocketAddress());
+            socket.close();
+
+            // PAUSE CURRENT THREAD TO SLOW DOWN ANY POSSIBLE ATTACK
+            Thread.sleep(100);
+          }
 
           socket.setPerformancePreferences(0, 2, 1);
           socket.setSendBufferSize(socketBufferSize);
@@ -241,11 +254,13 @@ public class OServerNetworkListener extends Thread {
   }
 
   @SuppressWarnings("unchecked")
-  public static OServerCommand createCommand(final OServerCommandConfiguration iCommand) {
+  public static OServerCommand createCommand(final OServer server, final OServerCommandConfiguration iCommand) {
     try {
       final Constructor<OServerCommand> c = (Constructor<OServerCommand>) Class.forName(iCommand.implementation).getConstructor(
           OServerCommandConfiguration.class);
-      return c.newInstance(new Object[] { iCommand });
+      final OServerCommand cmd = c.newInstance(new Object[] { iCommand });
+      cmd.configure(server);
+      return cmd;
     } catch (Exception e) {
       throw new IllegalArgumentException("Cannot create custom command invoking the constructor: " + iCommand.implementation + "("
           + iCommand + ")", e);

@@ -152,7 +152,7 @@ public class OAutoshardedStorageImpl implements OAutoshardedStorage {
   @Override
   public OStorageOperationResult<Boolean> deleteRecord(ORecordId iRecordId, ORecordVersion iVersion, int iMode,
       ORecordCallback<Boolean> iCallback) {
-    if (ODistributedThreadLocal.INSTANCE.distributedExecution || undistributedClusters.contains(iRecordId.getClusterId())) {
+    if (ODistributedThreadLocal.INSTANCE.get() != null || undistributedClusters.contains(iRecordId.getClusterId())) {
       return wrapped.deleteRecord(iRecordId, iVersion, iMode, iCallback);
     }
 
@@ -188,12 +188,13 @@ public class OAutoshardedStorageImpl implements OAutoshardedStorage {
     return wrapped.existsResource(iName);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T removeResource(final String iName) {
-    return wrapped.removeResource(iName);
+    return (T) wrapped.removeResource(iName);
   }
 
   public <T> T getResource(final String iName, final Callable<T> iCallback) {
-    return wrapped.getResource(iName, iCallback);
+    return (T) wrapped.getResource(iName, iCallback);
   }
 
   public void open(final String iUserName, final String iUserPassword, final Map<String, Object> iProperties) {

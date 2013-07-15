@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.orientechnologies.orient.server.task;
+package com.orientechnologies.orient.server.distributed.task;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.util.concurrent.Callable;
 import com.orientechnologies.orient.core.db.ODatabaseRecordThreadLocal;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.record.ODatabaseRecord;
-import com.orientechnologies.orient.server.OServerMain;
+import com.orientechnologies.orient.server.OServer;
 import com.orientechnologies.orient.server.config.OServerUserConfiguration;
 import com.orientechnologies.orient.server.distributed.ODistributedAbstractPlugin;
 import com.orientechnologies.orient.server.distributed.ODistributedServerManager;
@@ -32,42 +32,28 @@ import com.orientechnologies.orient.server.distributed.ODistributedServerManager
 import com.orientechnologies.orient.server.distributed.OStorageSynchronizer;
 
 /**
- * Distributed task base abstract class used for distributed actions and events.
+ * Base class for Tasks to be executed remotely.
  * 
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
-public abstract class OAbstractDistributedTask<T> implements Callable<T>, Externalizable {
-  private static final long serialVersionUID = 1L;
+public abstract class OAbstractRemoteTask<T> implements Callable<T>, Externalizable {
+  private static final long   serialVersionUID = 1L;
 
-  public enum STATUS {
-    DISTRIBUTE, REMOTE_EXEC, ALIGN, LOCAL_EXEC
-  }
+  private String              nodeSource;
+  protected String            nodeDestination;
+  protected String            databaseName;
+  protected long              runId;
+  protected long              operationSerial;
 
-  public enum EXEC_TYPE {
-    LOCAL_ONLY, REMOTE_ONLY, BOTH
-  }
-
-  protected String                          nodeSource;
-  protected String                          databaseName;
-  protected long                            runId;
-  protected long                            operationSerial;
-
-  protected EXECUTION_MODE                  mode;
-  protected STATUS                          status;
-  protected EXEC_TYPE                       executionType = EXEC_TYPE.BOTH;
-  protected boolean                         inheritedDatabase;
-
-  protected static OServerUserConfiguration replicatorUser;
-  static {
-    replicatorUser = OServerMain.server().getUser(ODistributedAbstractPlugin.REPLICATOR_USER);
-  }
+  protected EXECUTION_MODE    mode;
+  protected boolean           inheritedDatabase;
+  protected transient OServer serverInstance;
 
   /**
    * Constructor used from unmarshalling.
    */
-  public OAbstractDistributedTask() {
-    status = STATUS.REMOTE_EXEC;
+  public OAbstractRemoteTask() {
   }
 
   /**
@@ -76,20 +62,33 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
    * @param iRunId
    * @param iOperationId
    */
-  public OAbstractDistributedTask(final long iRunId, final long iOperationId) {
+  public OAbstractRemoteTask(final long iRunId, final long iOperationId) {
     this.runId = iRunId;
     this.operationSerial = iOperationId;
-    this.status = STATUS.ALIGN;
   }
 
-  public OAbstractDistributedTask(final String nodeSource, final String databaseName, final EXECUTION_MODE iMode) {
-    this.nodeSource = nodeSource;
+  public OAbstractRemoteTask(final OServer iServer, final ODistributedServerManager iDistributedSrvMgr, final String databaseName,
+      final EXECUTION_MODE iMode) {
+    this.serverInstance = iServer;
+
+    this.setNodeSource(iDistributedSrvMgr.getLocalNodeId());
     this.databaseName = databaseName;
     this.mode = iMode;
-    this.status = STATUS.DISTRIBUTE;
 
-    this.runId = getDistributedServerManager().getRunId();
-    this.operationSerial = getDistributedServerManager().incrementDistributedSerial(databaseName);
+    this.runId = iDistributedSrvMgr.getRunId();
+    this.operationSerial = -1;
+  }
+
+  public abstract String getName();
+
+  /**
+   * Local node execution
+   * 
+   * @throws Exception
+   * 
+   */
+  public Object executeOnLocalNode() throws Exception {
+    return call();
   }
 
   /**
@@ -104,32 +103,37 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
   public void handleConflict(final String iRemoteNode, Object localResult, Object remoteResult) {
   }
 
-  public abstract String getName();
-
   @Override
   public void writeExternal(final ObjectOutput out) throws IOException {
-    out.writeUTF(nodeSource);
+    out.writeUTF(getNodeSource());
+    out.writeUTF(nodeDestination);
     out.writeUTF(databaseName);
     out.writeLong(runId);
     out.writeLong(operationSerial);
     out.writeByte(mode.ordinal());
-    out.writeByte(status.ordinal());
-    out.writeByte(executionType.ordinal());
   }
 
   @Override
   public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-    nodeSource = in.readUTF();
+    setNodeSource(in.readUTF());
+    nodeDestination = in.readUTF();
+    serverInstance = OServer.getInstance(nodeDestination);
     databaseName = in.readUTF();
     runId = in.readLong();
     operationSerial = in.readLong();
     mode = EXECUTION_MODE.values()[in.readByte()];
-    status = STATUS.values()[in.readByte()];
-    executionType = EXEC_TYPE.values()[in.readByte()];
   }
 
   public String getNodeSource() {
     return nodeSource;
+  }
+
+  public String getNodeDestination() {
+    return nodeDestination;
+  }
+
+  public void setNodeDestination(final String masterNodeId) {
+    nodeDestination = masterNodeId;
   }
 
   public String getDatabaseName() {
@@ -152,16 +156,7 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
     mode = iMode;
   }
 
-  public STATUS getStatus() {
-    return status;
-  }
-
-  public OAbstractDistributedTask<T> setStatus(final STATUS status) {
-    this.status = status;
-    return this;
-  }
-
-  public void setNodeSource(String nodeSource) {
+  public void setNodeSource(final String nodeSource) {
     this.nodeSource = nodeSource;
   }
 
@@ -172,18 +167,6 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
   @Override
   public String toString() {
     return getName();
-  }
-
-  protected OStorageSynchronizer getDatabaseSynchronizer() {
-    return getDistributedServerManager().getDatabaseSynchronizer(databaseName);
-  }
-
-  protected ODistributedServerManager getDistributedServerManager() {
-    return (ODistributedServerManager) OServerMain.server().getVariable("ODistributedAbstractPlugin");
-  }
-
-  protected void setAsCompleted(final OStorageSynchronizer dbSynchronizer, long operationLogOffset) throws IOException {
-    dbSynchronizer.getLog().changeOperationStatus(operationLogOffset, null);
   }
 
   protected ODatabaseDocumentTx openDatabase() {
@@ -198,8 +181,9 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
     }
 
     inheritedDatabase = false;
-    return (ODatabaseDocumentTx) OServerMain.server().openDatabase("document", databaseName, replicatorUser.name,
-        replicatorUser.password);
+    OServerUserConfiguration replicatorUser = serverInstance.getUser(ODistributedAbstractPlugin.REPLICATOR_USER);
+    return (ODatabaseDocumentTx) serverInstance
+        .openDatabase("document", databaseName, replicatorUser.name, replicatorUser.password);
   }
 
   protected void closeDatabase(final ODatabaseDocumentTx iDatabase) {
@@ -207,11 +191,19 @@ public abstract class OAbstractDistributedTask<T> implements Callable<T>, Extern
       iDatabase.close();
   }
 
-  public EXEC_TYPE getExecutionType() {
-    return executionType;
+  public OServer getServerInstance() {
+    return serverInstance;
   }
 
-  public void setExecutionType(EXEC_TYPE executionMode) {
-    this.executionType = executionMode;
+  public void setServerInstance(final OServer serverInstance) {
+    this.serverInstance = serverInstance;
+  }
+
+  public OStorageSynchronizer getDatabaseSynchronizer() {
+    return getDistributedServerManager().getDatabaseSynchronizer(databaseName);
+  }
+
+  public ODistributedServerManager getDistributedServerManager() {
+    return serverInstance.getDistributedManager();
   }
 }
