@@ -39,6 +39,24 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>0.30</version>
+                <configuration>
+                    <targetClasses>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.OWoWCache</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.LRUList</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.ReadWriteCacheTest</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.WoWCacheTest</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.LRUListTest</param>
+                    </targetTests>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

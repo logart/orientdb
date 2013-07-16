@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.testng.Assert;
@@ -35,6 +36,7 @@ public class WoWCacheTest {
   private String                 fileName;
   private OWriteAheadLog         writeAheadLog;
   private OWoWCache              writeCache;
+  private byte                   seed;
 
   @BeforeClass
   public void beforeClass() throws IOException {
@@ -50,7 +52,10 @@ public class WoWCacheTest {
 
     fileName = "o2QCacheTest.tst";
 
+    seed = (byte) (new Random().nextInt() & 0xFF);
+
     OWALRecordsFactory.INSTANCE.registerNewRecord((byte) 128, WriteAheadLogTest.TestRecord.class);
+
   }
 
   @BeforeMethod
@@ -101,7 +106,7 @@ public class WoWCacheTest {
   }
 
   private void initBuffer() throws IOException {
-    cache = new OReadWriteCache(16 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    cache = new OReadWriteCache(64 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
     writeCache = cache.getWriteCache();
 
     final OStorageSegmentConfiguration segmentConfiguration = new OStorageSegmentConfiguration(storageLocal.getConfiguration(),
@@ -141,7 +146,7 @@ public class WoWCacheTest {
     }
   }
 
-  @Test
+  @Test(enabled = false)
   public void testFlushTwoWriteGroups() throws Exception {
     long fileId = cache.openFile(fileName);
     for (int i = 0; i < 32; i += 8) {
@@ -149,6 +154,7 @@ public class WoWCacheTest {
     }
     ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
     Collection<OCacheEntry> values = internalCache.values();
+    Assert.assertEquals(values.size(), 4);
     for (OCacheEntry value : values) {
       Assert.assertTrue(value.recentlyChanged);
     }
@@ -181,5 +187,94 @@ public class WoWCacheTest {
       Assert.assertFalse(value.recentlyChanged);
     }
     Assert.assertTrue(writeCache.getCache().isEmpty());
+  }
+
+  @Test
+  public void testRecordShouldBeMarkedAsRecentlyChangedAfterMarkDirtyMethod_InternalCheck() throws Exception {
+    long fileId = cache.openFile(fileName);
+    writeCache.markDirty(fileId, 0);
+
+    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
+    Collection<OCacheEntry> values = Collections.unmodifiableCollection(internalCache.values());
+    Assert.assertEquals(values.size(), 1);
+    for (OCacheEntry value : values) {
+      Assert.assertTrue(value.recentlyChanged);
+    }
+  }
+
+  @Test
+  public void testInWriteCacheFlagShouldBeTrueAfterMarkDirtyMethod_InternalCheck() throws Exception {
+    long fileId = cache.openFile(fileName);
+    writeCache.markDirty(fileId, 0);
+
+    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
+    Collection<OCacheEntry> values = Collections.unmodifiableCollection(internalCache.values());
+    Assert.assertEquals(values.size(), 1);
+    for (OCacheEntry value : values) {
+      Assert.assertTrue(value.inWriteCache);
+    }
+  }
+
+  @Test
+  public void testRecordShouldBeMarkedAsRecentlyChangedAfterMarkDirtyMethod_ReturnValueCheck() throws Exception {
+    long fileId = cache.openFile(fileName);
+    OCacheEntry cacheEntry = writeCache.markDirty(fileId, 0);
+
+    Assert.assertTrue(cacheEntry.recentlyChanged);
+  }
+
+  @Test
+  public void testInWriteCacheFlagShouldBeTrueAfterMarkDirtyMethod_ReturnValueCheck() throws Exception {
+    long fileId = cache.openFile(fileName);
+    OCacheEntry cacheEntry = writeCache.markDirty(fileId, 0);
+
+    Assert.assertTrue(cacheEntry.inWriteCache);
+  }
+
+  @Test
+  public void testRecordShouldBeMarkedAsRecentlyChangedAfterMarkDirtyMethod_RecordAlreadyLoadedCase() throws Exception {
+    long fileId = cache.openFile(fileName);
+    OCacheEntry cacheEntry = cache.getReadCache().load(fileId, 0);
+    writeCache.markDirty(cacheEntry);
+
+    Assert.assertTrue(cacheEntry.recentlyChanged);
+  }
+
+  @Test
+  public void testInWriteCacheFlagShouldBeTrueAfterMarkDirtyMethod_RecordAlreadyLoadedCase() throws Exception {
+    long fileId = cache.openFile(fileName);
+    OCacheEntry cacheEntry = cache.getReadCache().load(fileId, 0);
+
+    writeCache.markDirty(cacheEntry);
+
+    Assert.assertTrue(cacheEntry.inWriteCache);
+  }
+
+  @Test
+  public void testMarkDirtyShouldThrowExceptionIfRecordNotExists() throws Exception {
+    try {
+      writeCache.markDirty(null);
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      Assert.assertEquals(e.getMessage(), "Requested page is not in cache");
+    }
+  }
+
+  @Test
+  public void testCacheSizeIsAlwaysLessThenOrEqualsToMaxCacheSize() throws Exception {
+    long fileId = cache.openFile(fileName);
+    for (int i = 0; i < 5; ++i) {
+      writeCache.markDirty(fileId, i);
+    }
+    Assert.assertTrue(writeCache.getCache().size() <= 4);
+  }
+
+  @Test
+  public void testClearMethodShouldEraseAllContentOfCache() throws Exception {
+    long fileId = cache.openFile(fileName);
+    writeCache.markDirty(fileId, 0);
+    Assert.assertEquals(cache.getWriteCache().getCache().size(), 1);
+    cache.clear();
+    Assert.assertEquals(cache.getWriteCache().getCache().size(), 0);
   }
 }

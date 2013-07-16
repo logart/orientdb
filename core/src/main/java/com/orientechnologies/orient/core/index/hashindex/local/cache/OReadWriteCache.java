@@ -439,8 +439,12 @@ public class OReadWriteCache implements ODiskCache {
     return readCache.getA1out();
   }
 
-  public OWoWCache getWriteCache() {
+  OWoWCache getWriteCache() {
     return writeCache;
+  }
+
+  O2QCache getReadCache() {
+    return readCache;
   }
 
   static final class FileLockKey implements Comparable<FileLockKey> {

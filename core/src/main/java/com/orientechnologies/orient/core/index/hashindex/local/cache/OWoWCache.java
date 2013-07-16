@@ -124,6 +124,9 @@ class OWoWCache {
     OReadWriteCache.FileLockKey fileLockKey = new OReadWriteCache.FileLockKey(fileId, pageIndex);
     OCacheEntry cacheEntry = cache.get(fileLockKey);
     if (cacheEntry == null) {
+      if (cache.size() >= maxSize) {
+        flushOne(true);
+      }
       long dataPointer = cacheFileContent(fileId, pageIndex);
 
       final OLogSequenceNumber lsn = OLSNHelper.getLogSequenceNumberFromPage(dataPointer, directMemory);
@@ -137,6 +140,7 @@ class OWoWCache {
   }
 
   private OCacheEntry putToCache(OCacheEntry cachedEntry) throws IOException {
+    assert cachedEntry != null;
     OReadWriteCache.FileLockKey fileLockKey = new OReadWriteCache.FileLockKey(cachedEntry.fileId, cachedEntry.pageIndex);
     OCacheEntry result = cache.get(fileLockKey);
     if (result == null) {
@@ -154,6 +158,8 @@ class OWoWCache {
     final long startPosition = pageIndex * pageSize;
     final long endPosition = startPosition + pageSize;
 
+    assert endPosition > startPosition;
+
     byte[] content = new byte[pageSize];
     long dataPointer;
     if (fileClassic.getFilledUpTo() >= endPosition) {
@@ -168,13 +174,12 @@ class OWoWCache {
   }
 
   private void doMarkDirty(OCacheEntry cacheEntry) {
-    if (cacheEntry.inWriteCache)
-      return;
-
-    dirtyPages.get(cacheEntry.fileId).put(cacheEntry.pageIndex, cacheEntry.loadedLSN);
+    if (!cacheEntry.inWriteCache) {
+      dirtyPages.get(cacheEntry.fileId).put(cacheEntry.pageIndex, cacheEntry.loadedLSN);
+      cacheEntry.inWriteCache = true;
+    }
 
     cacheEntry.recentlyChanged = true;
-    cacheEntry.inWriteCache = true;
   }
 
   public void clear() {
@@ -218,11 +223,13 @@ class OWoWCache {
 
     if (!writeGroupEntries.isEmpty()) {
       boolean recordsIsFresh = false;
-      for (OCacheEntry cacheEntry : writeGroupEntries.values()) {
-        if (cacheEntry.recentlyChanged) {
-          recordsIsFresh = true;
+      if (!forceFlush) {
+        for (OCacheEntry cacheEntry : writeGroupEntries.values()) {
+          if (cacheEntry.recentlyChanged) {
+            recordsIsFresh = true;
+          }
+          cacheEntry.recentlyChanged = false;
         }
-        cacheEntry.recentlyChanged = false;
       }
       if (forceFlush || !recordsIsFresh) {
         List<OReadWriteCache.FileLockKey> keysToFlush = lockWriteGroup(new ArrayList<OReadWriteCache.FileLockKey>(

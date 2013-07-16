@@ -777,6 +777,19 @@ public class ReadWriteCacheTest {
     Assert.assertEquals(dirtyPagesRecord.getDirtyPages(), dirtyPages);
   }
 
+  @Test
+  public void testWhenWriteCacheSizeIsGreaterThanMaxSizeRecordShouldBeFlushed() throws Exception {
+    long fileId = buffer.openFile(fileName);
+    byte[] value = { 1, 0, 3, seed, 5, 6, 7, 8 };
+    for (int i = 0; i < 2; ++i) {
+      long pointer = buffer.load(fileId, i);
+      buffer.markDirty(fileId, i);
+      directMemory.set(pointer + systemOffset, new byte[] { 1, (byte) i, 3, seed, 5, 6, 7, 8 }, 0, 8);
+      buffer.release(fileId, i);
+    }
+    assertFile(0, value, new OLogSequenceNumber(0, 0));
+  }
+
   private void updateFilePage(long pageIndex, long offset, byte[] value) throws IOException {
     String path = storageLocal.getConfiguration().getDirectory() + "/o2QCacheTest.tst";
 
