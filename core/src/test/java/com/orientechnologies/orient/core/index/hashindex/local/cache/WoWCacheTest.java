@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -106,7 +105,7 @@ public class WoWCacheTest {
   }
 
   private void initBuffer() throws IOException {
-    cache = new OReadWriteCache(64 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    cache = new OReadWriteCache(64 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true, false);
     writeCache = cache.getWriteCache();
 
     final OStorageSegmentConfiguration segmentConfiguration = new OStorageSegmentConfiguration(storageLocal.getConfiguration(),
@@ -143,31 +142,6 @@ public class WoWCacheTest {
     writeCache.flushFile(fileId);
     for (OCacheEntry value : values) {
       Assert.assertFalse(value.recentlyChanged);
-    }
-  }
-
-  @Test(enabled = false)
-  public void testFlushTwoWriteGroups() throws Exception {
-    long fileId = cache.openFile(fileName);
-    for (int i = 0; i < 32; i += 8) {
-      writeCache.markDirty(fileId, i);
-    }
-    ConcurrentSkipListMap<OReadWriteCache.FileLockKey, OCacheEntry> internalCache = writeCache.getCache();
-    Collection<OCacheEntry> values = internalCache.values();
-    Assert.assertEquals(values.size(), 4);
-    for (OCacheEntry value : values) {
-      Assert.assertTrue(value.recentlyChanged);
-    }
-    HashMap<OReadWriteCache.FileLockKey, OCacheEntry> cacheSnapshot = new HashMap<OReadWriteCache.FileLockKey, OCacheEntry>(
-        internalCache);
-    writeCache.flushFile(fileId);
-    for (int i = 0; i < 16; i += 8) {
-      OCacheEntry cacheEntry = cacheSnapshot.get(new OReadWriteCache.FileLockKey(fileId, i));
-      Assert.assertFalse(cacheEntry.recentlyChanged);
-    }
-    for (int i = 16; i < 32; i += 8) {
-      OCacheEntry cacheEntry = cacheSnapshot.get(new OReadWriteCache.FileLockKey(fileId, i));
-      Assert.assertTrue(cacheEntry.recentlyChanged);
     }
   }
 
@@ -274,7 +248,96 @@ public class WoWCacheTest {
     long fileId = cache.openFile(fileName);
     writeCache.markDirty(fileId, 0);
     Assert.assertEquals(cache.getWriteCache().getCache().size(), 1);
-    cache.clear();
+    writeCache.clear();
     Assert.assertEquals(cache.getWriteCache().getCache().size(), 0);
   }
+
+  @Test
+  public void testReadExistingInformationShouldWorkEvenIfPageIsNotInReadCache() throws Exception {
+    long fileId = cache.openFile(fileName);
+    long pointer = cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+    byte[] value = new byte[] { 1, 2, 3, 99, 5, 6, 7, seed };
+    directMemory.set(pointer + systemOffset, value, 0, 8);
+    cache.release(fileId, 0);
+    cache.flushBuffer();
+    cache.close();
+    Assert.assertEquals(cache.getWriteCache().getSize(), 0);
+    Assert.assertEquals(cache.getReadCache().getSize(), 0);
+
+    fileId = cache.openFile(fileName);
+    OCacheEntry cacheEntry = writeCache.markDirty(fileId, 0);
+    byte[] storedValue = directMemory.get(cacheEntry.dataPointer + systemOffset, 8);
+
+    Assert.assertEquals(storedValue, value);
+  }
+
+  @Test
+  public void testRemoveShouldRemoveRecordFromCache() throws Exception {
+    long fileId = cache.openFile(fileName);
+    cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+    cache.release(fileId, 0);
+
+    Assert.assertTrue(writeCache.get(fileId, 0).inWriteCache);
+    writeCache.remove(fileId, 0);
+    Assert.assertNull(writeCache.get(fileId, 0));
+  }
+
+  @Test
+  public void testRemoveShouldSetInWriteCacheFlagToFalse() throws Exception {
+    long fileId = cache.openFile(fileName);
+    cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+    cache.release(fileId, 0);
+
+    OCacheEntry cacheEntry = writeCache.get(fileId, 0);
+    Assert.assertTrue(cacheEntry.inWriteCache);
+    writeCache.remove(fileId, 0);
+    Assert.assertFalse(cacheEntry.inWriteCache);
+  }
+
+  @Test
+  public void testRemoveShouldFreeMemoryIfRecordIsNotInReadCache() throws Exception {
+    long fileId = cache.openFile(fileName);
+    cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+    cache.release(fileId, 0);
+
+    cache.getReadCache().clear();
+
+    OCacheEntry cacheEntry = writeCache.get(fileId, 0);
+    Assert.assertTrue(cacheEntry.inWriteCache);
+    writeCache.remove(fileId, 0);
+    Assert.assertFalse(cacheEntry.inWriteCache);
+  }
+
+  @Test
+  public void testRemoveShouldNotAffectUsedSetInWriteCacheFlagToFalse() throws Exception {
+    long fileId = cache.openFile(fileName);
+    cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+
+    Assert.assertTrue(writeCache.get(fileId, 0).inWriteCache);
+    writeCache.remove(fileId, 0);
+    Assert.assertTrue(writeCache.get(fileId, 0).inWriteCache);
+
+    cache.release(fileId, 0);
+  }
+
+  @Test
+  public void testWhenSomeRecordsAreLockedFlushFileShouldThrowException() throws Exception {
+    long fileId = cache.openFile(fileName);
+    cache.load(fileId, 0);
+    cache.markDirty(fileId, 0);
+    try {
+      writeCache.flushFile(fileId);
+      Assert.fail();
+    } catch (OBlockedPageException e) {
+      Assert.assertTrue(e.getMessage().matches("Unable to perform flush file because page \\[\\d, \\d\\] is in use."));
+    } finally {
+      cache.release(fileId, 0);
+    }
+  }
+
 }

@@ -160,6 +160,11 @@ class LRUList implements Iterable<OCacheEntry> {
   }
 
   public void clear() {
+    LRUEntry current = tail;
+    while (current != null) {
+      current.value.inReadCache = false;
+      current = current.before;
+    }
     entries = new LRUEntry[1024];
     nextThreshold = (int) (entries.length * 0.75);
 

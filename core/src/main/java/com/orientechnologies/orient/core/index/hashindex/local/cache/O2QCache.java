@@ -137,8 +137,10 @@ class O2QCache {
     OLogSequenceNumber lsn;
     if (cacheEntry.inWriteCache)
       lsn = cacheEntry.loadedLSN;
-    else
+    else {
+      System.out.println("q3");
       lsn = OLSNHelper.getLogSequenceNumberFromPage(cacheEntry.dataPointer, directMemory);
+    }
 
     cacheEntry = am.putToMRU(cacheEntry.fileId, cacheEntry.pageIndex, cacheEntry.dataPointer, lsn);
     return cacheEntry;
@@ -152,7 +154,9 @@ class O2QCache {
       dataPointer = cacheFileContent(fileId, pageIndex);
     }
 
+    System.out.println("q4a " + dataPointer);
     OLogSequenceNumber lsn = OLSNHelper.getLogSequenceNumberFromPage(dataPointer, directMemory);
+    System.out.println("q4b " + dataPointer);
 
     return a1in.putToMRU(fileId, pageIndex, dataPointer, lsn);
   }
@@ -166,9 +170,11 @@ class O2QCache {
     long dataPointer;
     if (fileClassic.getFilledUpTo() >= endPosition) {
       fileClassic.read(startPosition, content, content.length);
+      System.out.println("q1");
       dataPointer = directMemory.allocate(content);
     } else {
       fileClassic.allocateSpace((int) (endPosition - fileClassic.getFilledUpTo()));
+      System.out.println("q2");
       dataPointer = directMemory.allocate(content);
     }
 
@@ -185,6 +191,7 @@ class O2QCache {
         } else {
           if (!removedFromAInEntry.inWriteCache) {
             assert removedFromAInEntry.usageCounter == 0;
+            System.out.println("q5");
             directMemory.free(removedFromAInEntry.dataPointer);
           }
 
@@ -193,6 +200,7 @@ class O2QCache {
         if (a1out.size() > K_OUT) {
           OCacheEntry removedEntry = a1out.removeLRU();
           assert removedEntry.usageCounter == 0;
+          removedEntry.inReadCache = false;
           Set<Long> pageEntries = filePages.get(removedEntry.fileId);
           pageEntries.remove(removedEntry.pageIndex);
         }
@@ -201,12 +209,15 @@ class O2QCache {
         if (removedEntry == null) {
           increaseCacheSize();
         } else {
+
           if (!removedEntry.inWriteCache) {
             assert removedEntry.usageCounter == 0;
+            System.out.println("q6");
             directMemory.free(removedEntry.dataPointer);
             Set<Long> pageEntries = filePages.get(removedEntry.fileId);
             pageEntries.remove(removedEntry.pageIndex);
           }
+          removedEntry.inReadCache = false;
         }
       }
     }
@@ -274,5 +285,9 @@ class O2QCache {
   public void deleteFile(long fileId) {
     // todo
     // check if this method is necessary
+  }
+
+  public int getSize() {
+    return a1in.size() + a1out.size() + am.size();
   }
 }

@@ -88,7 +88,10 @@ public class OLongSerializer implements OBinarySerializer<Long> {
 
   @Override
   public Long deserializeFromDirectMemory(ODirectMemory memory, long pointer) {
-    return memory.getLong(pointer);
+    System.out.println("4a " + pointer);
+    long result = memory.getLong(pointer);
+    System.out.println("4b " + pointer);
+    return result;
   }
 
   @Override

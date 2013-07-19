@@ -433,6 +433,8 @@ public class LocalPaginatedClusterTest {
     recordVersion.increment();
 
     for (int i = 0; i < records; i++) {
+      System.out.println("s " + seed + " " + i);
+
       int recordSize = mersenneTwisterFast.nextInt(3 * OLocalPage.MAX_RECORD_SIZE) + 1;
 
       byte[] bigRecord = new byte[recordSize];

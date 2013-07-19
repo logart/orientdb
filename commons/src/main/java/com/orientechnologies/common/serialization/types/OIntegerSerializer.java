@@ -84,6 +84,7 @@ public class OIntegerSerializer implements OBinarySerializer<Integer> {
 
   @Override
   public Integer deserializeFromDirectMemory(ODirectMemory memory, long pointer) {
+    System.out.println("5 " + pointer);
     return memory.getInt(pointer);
   }
 

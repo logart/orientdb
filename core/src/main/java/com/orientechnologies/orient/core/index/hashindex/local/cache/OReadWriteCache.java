@@ -68,7 +68,11 @@ public class OReadWriteCache implements ODiskCache {
 
   public OReadWriteCache(long maxMemory, int writeQueueLength, ODirectMemory directMemory, OWriteAheadLog writeAheadLog,
       int pageSize, OStorageLocalAbstract storageLocal, boolean syncOnPageFlush) {
+    this(maxMemory, writeQueueLength, directMemory, writeAheadLog, pageSize, storageLocal, syncOnPageFlush, true);
+  }
 
+  public OReadWriteCache(long maxMemory, int writeQueueLength, ODirectMemory directMemory, OWriteAheadLog writeAheadLog,
+      int pageSize, OStorageLocalAbstract storageLocal, boolean syncOnPageFlush, boolean startFlush) {
     this.pageSize = pageSize;
     this.storageLocal = storageLocal;
     // TODO concurrent map?
@@ -91,7 +95,8 @@ public class OReadWriteCache implements ODiskCache {
     readCache = new O2QCache((maxSize - (maxSize >> 4)), files, filePages, pageSize, directMemory, entriesLocks);
 
     syncObject = new Object();
-    writeCache.startFlush();
+    if (startFlush)
+      writeCache.startFlush();
   }
 
   @Override
@@ -223,7 +228,6 @@ public class OReadWriteCache implements ODiskCache {
     }
   }
 
-  // todo remove records from write cache
   @Override
   public void truncateFile(long fileId) throws IOException {
     synchronized (syncObject) {
@@ -281,6 +285,7 @@ public class OReadWriteCache implements ODiskCache {
   public void close() throws IOException {
     synchronized (syncObject) {
       clear();
+      writeCache.stopFlush();
       for (OFileClassic fileClassic : files.values()) {
         if (fileClassic.isOpen()) {
           fileClassic.synch();

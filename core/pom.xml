@@ -45,10 +45,7 @@
                 <version>0.30</version>
                 <configuration>
                     <targetClasses>
-                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache</param>
-                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.OWoWCache</param>
-                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache</param>
-                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.LRUList</param>
+                        <param>com.orientechnologies.orient.core.index.hashindex.local.cache.*</param>
                     </targetClasses>
                     <targetTests>
                         <param>com.orientechnologies.orient.core.index.hashindex.local.cache.ReadWriteCacheTest</param>

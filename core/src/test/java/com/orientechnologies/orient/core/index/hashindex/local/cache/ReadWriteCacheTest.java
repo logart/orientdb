@@ -2,8 +2,10 @@ package com.orientechnologies.orient.core.index.hashindex.local.cache;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.zip.CRC32;
@@ -111,7 +113,7 @@ public class ReadWriteCacheTest {
   }
 
   private void initBuffer() throws IOException {
-    buffer = new OReadWriteCache(16 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(16 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true, false);
 
     final OStorageSegmentConfiguration segmentConfiguration = new OStorageSegmentConfiguration(storageLocal.getConfiguration(),
         "oRWCacheTest", 0);
@@ -613,6 +615,7 @@ public class ReadWriteCacheTest {
     Assert.assertTrue(buffer.checkStoredPages(null).length == 0);
   }
 
+  @Test(enabled = false)
   public void testMagicNumberIsBroken() throws Exception {
     long fileId = buffer.openFile(fileName);
 
@@ -775,6 +778,71 @@ public class ReadWriteCacheTest {
 
     final ODirtyPagesRecord dirtyPagesRecord = (ODirtyPagesRecord) writeAheadLog.read(prevLSN);
     Assert.assertEquals(dirtyPagesRecord.getDirtyPages(), dirtyPages);
+  }
+
+  // @Test
+  // public void testTruncateShouldRemoveRecordsFromCaches() throws Exception {
+  // TODO
+  // throw new RuntimeException();
+  // }
+
+  @Test
+  public void testClearShouldSetInReadCacheFlagToFalse() throws Exception {
+    long fileId = buffer.openFile(fileName);
+
+    long[] pointers;
+    pointers = new long[4];
+
+    for (int i = 0; i < 4; i++) {
+      pointers[i] = buffer.load(fileId, i);
+      buffer.markDirty(fileId, i);
+      directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, (byte) i }, 0, 8);
+      buffer.release(fileId, i);
+    }
+
+    LRUList a1in = buffer.getA1in();
+
+    List<OCacheEntry> cacheCopy = new ArrayList<OCacheEntry>();
+    for (OCacheEntry cacheEntry : a1in) {
+      cacheCopy.add(cacheEntry);
+    }
+
+    buffer.clear();
+
+    Assert.assertEquals(cacheCopy.size(), 4);
+    for (OCacheEntry cacheEntry : cacheCopy) {
+      Assert.assertFalse(cacheEntry.inReadCache);
+    }
+
+  }
+
+  @Test
+  public void testClearShouldSetInWriteCacheFlagToFalse() throws Exception {
+    long fileId = buffer.openFile(fileName);
+
+    long[] pointers;
+    pointers = new long[4];
+
+    for (int i = 0; i < 4; i++) {
+      pointers[i] = buffer.load(fileId, i);
+      buffer.markDirty(fileId, i);
+      directMemory.set(pointers[i] + systemOffset, new byte[] { (byte) i, 1, 2, seed, 4, 5, 6, (byte) i }, 0, 8);
+      buffer.release(fileId, i);
+    }
+
+    LRUList a1in = buffer.getA1in();
+
+    List<OCacheEntry> cacheCopy = new ArrayList<OCacheEntry>();
+    for (OCacheEntry cacheEntry : a1in) {
+      cacheCopy.add(cacheEntry);
+    }
+
+    buffer.clear();
+
+    Assert.assertEquals(cacheCopy.size(), 4);
+    for (OCacheEntry cacheEntry : cacheCopy) {
+      Assert.assertFalse(cacheEntry.inWriteCache);
+    }
   }
 
   @Test
