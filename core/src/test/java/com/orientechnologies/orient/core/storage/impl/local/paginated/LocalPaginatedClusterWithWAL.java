@@ -10,11 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 import com.orientechnologies.common.directmemory.ODirectMemory;
 import com.orientechnologies.common.directmemory.ODirectMemoryFactory;
@@ -22,17 +18,11 @@ import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.config.OStorageClusterConfiguration;
 import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageSegmentConfiguration;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.storage.fs.OAbstractFile;
 import com.orientechnologies.orient.core.storage.impl.local.OStorageVariableParser;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OAtomicUnitEndRecord;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OAtomicUnitStartRecord;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OClusterAwareWALRecord;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OLogSequenceNumber;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OWALPage;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OWALRecord;
-import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.OWriteAheadLog;
+import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.*;
 
 /**
  * @author Andrey Lomakin
@@ -73,7 +63,7 @@ public class LocalPaginatedClusterWithWAL extends LocalPaginatedClusterTest {
     writeAheadLog = new OWriteAheadLog(6000, -1, 10 * 1024L * OWALPage.PAGE_SIZE, 100L * 1024 * 1024 * 1024, storage);
 
     ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
-    diskCache = new O2QCache(1024L * 1024 * 1024 * 1024, 15000, directMemory, writeAheadLog,
+    diskCache = new OReadWriteCache(1024L * 1024 * 1024 * 1024, 15000, directMemory, writeAheadLog,
         OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, storage, false);
 
     OStorageVariableParser variableParser = new OStorageVariableParser(buildDirectory);
@@ -105,7 +95,7 @@ public class LocalPaginatedClusterWithWAL extends LocalPaginatedClusterTest {
       buildDir.mkdirs();
 
     ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
-    testDiskCache = new O2QCache(1024 * 1024 * 1024, 15000, directMemory, null,
+    testDiskCache = new OReadWriteCache(1024 * 1024 * 1024, 15000, directMemory, null,
         OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, testStorage, false);
 
     OStorageVariableParser variableParser = new OStorageVariableParser(buildDirectory);

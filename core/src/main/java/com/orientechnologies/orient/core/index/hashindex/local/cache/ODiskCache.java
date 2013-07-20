@@ -13,7 +13,7 @@ import com.orientechnologies.orient.core.storage.impl.local.paginated.wal.ODirty
 public interface ODiskCache {
   long openFile(String fileName) throws IOException;
 
-  void markDirty(long fileId, long pageIndex);
+  void markDirty(long fileId, long pageIndex) throws IOException;
 
   long load(long fileId, long pageIndex) throws IOException;
 

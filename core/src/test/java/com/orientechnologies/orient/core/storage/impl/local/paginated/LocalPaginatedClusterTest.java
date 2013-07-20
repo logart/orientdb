@@ -5,15 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -33,8 +25,8 @@ import com.orientechnologies.orient.core.config.OStorageConfiguration;
 import com.orientechnologies.orient.core.config.OStorageSegmentConfiguration;
 import com.orientechnologies.orient.core.id.OClusterPosition;
 import com.orientechnologies.orient.core.id.OClusterPositionFactory;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.serialization.compression.impl.ONothingCompression;
 import com.orientechnologies.orient.core.serialization.compression.impl.OSnappyCompression;
 import com.orientechnologies.orient.core.storage.OCluster;
@@ -72,7 +64,7 @@ public class LocalPaginatedClusterTest {
     when(storageConfiguration.getDirectory()).thenReturn(buildDirectory);
 
     ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
-    diskCache = new O2QCache(2L * 1024 * 1024 * 1024, 15000, directMemory, null,
+    diskCache = new OReadWriteCache(2L * 1024 * 1024 * 1024, 15000, directMemory, null,
         OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, storage, false);
 
     OStorageVariableParser variableParser = new OStorageVariableParser(buildDirectory);

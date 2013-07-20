@@ -18,13 +18,7 @@ package com.orientechnologies.orient.core.storage.impl.local;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 import com.orientechnologies.common.concur.lock.OLockManager.LOCK;
@@ -42,12 +36,7 @@ import com.orientechnologies.common.profiler.OProfiler.OProfilerHookValue;
 import com.orientechnologies.common.util.OArrays;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.command.OCommandOutputListener;
-import com.orientechnologies.orient.core.config.OGlobalConfiguration;
-import com.orientechnologies.orient.core.config.OStorageClusterConfiguration;
-import com.orientechnologies.orient.core.config.OStorageConfiguration;
-import com.orientechnologies.orient.core.config.OStorageDataConfiguration;
-import com.orientechnologies.orient.core.config.OStorageEHClusterConfiguration;
-import com.orientechnologies.orient.core.config.OStoragePhysicalClusterConfigurationLocal;
+import com.orientechnologies.orient.core.config.*;
 import com.orientechnologies.orient.core.db.record.ORecordOperation;
 import com.orientechnologies.orient.core.engine.local.OEngineLocal;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
@@ -58,17 +47,11 @@ import com.orientechnologies.orient.core.id.OClusterPosition;
 import com.orientechnologies.orient.core.id.OClusterPositionFactory;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
 import com.orientechnologies.orient.core.index.hashindex.local.cache.ODiskCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.memory.OMemoryWatchDog;
 import com.orientechnologies.orient.core.metadata.OMetadata;
-import com.orientechnologies.orient.core.storage.OCluster;
-import com.orientechnologies.orient.core.storage.OClusterEntryIterator;
-import com.orientechnologies.orient.core.storage.OPhysicalPosition;
-import com.orientechnologies.orient.core.storage.ORawBuffer;
-import com.orientechnologies.orient.core.storage.ORecordCallback;
-import com.orientechnologies.orient.core.storage.OStorage;
-import com.orientechnologies.orient.core.storage.OStorageOperationResult;
+import com.orientechnologies.orient.core.storage.*;
 import com.orientechnologies.orient.core.storage.fs.OMMapManagerLocator;
 import com.orientechnologies.orient.core.storage.impl.local.eh.OClusterLocalEH;
 import com.orientechnologies.orient.core.tx.OTransaction;
@@ -123,7 +106,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
     final ODirectMemory directMemory = ODirectMemoryFactory.INSTANCE.directMemory();
 
     if (directMemory != null)
-      diskCache = new O2QCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * 1024 * 1024,
+      diskCache = new OReadWriteCache(OGlobalConfiguration.DISK_CACHE_SIZE.getValueAsLong() * 1024 * 1024,
           OGlobalConfiguration.DISK_CACHE_WRITE_QUEUE_LENGTH.getValueAsInteger(), directMemory, null,
           OGlobalConfiguration.DISK_CACHE_PAGE_SIZE.getValueAsInteger() * 1024, this, false);
     else
@@ -1391,7 +1374,6 @@ public class OStorageLocal extends OStorageLocalAbstract {
 
   /**
    * Returns the list of holes as pair of position & ODataHoleInfo
-   * 
    */
   public List<ODataHoleInfo> getHolesList() {
     final List<ODataHoleInfo> holes = new ArrayList<ODataHoleInfo>();
@@ -1412,7 +1394,6 @@ public class OStorageLocal extends OStorageLocalAbstract {
 
   /**
    * Returns the total number of holes.
-   * 
    */
   public long getHoles() {
     lock.acquireSharedLock();
@@ -1431,7 +1412,6 @@ public class OStorageLocal extends OStorageLocalAbstract {
 
   /**
    * Returns the total size used by holes
-   * 
    */
   public long getHoleSize() {
     lock.acquireSharedLock();
@@ -1749,7 +1729,7 @@ public class OStorageLocal extends OStorageLocalAbstract {
     }
   }
 
-	@Override
+  @Override
   public boolean isHashClustersAreUsed() {
     return OGlobalConfiguration.USE_LHPEPS_CLUSTER.getValueAsBoolean();
   }

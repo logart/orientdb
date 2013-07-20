@@ -271,6 +271,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     return higherEntries(key, -1);
   }
 
+  @SuppressWarnings("unchecked")
   public OHashIndexBucket.Entry<K, V>[] higherEntries(K key, int limit) {
     acquireSharedLock();
     try {
@@ -338,6 +339,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     metadataStore.storeMetadata(filesMetadata);
   }
 
+  @SuppressWarnings("unchecked")
   public void load(String name, OStorageLocalAbstract storageLocal) {
     acquireExclusiveLock();
     try {
@@ -389,6 +391,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private OHashIndexBucket.Entry<K, V>[] convertBucketToEntries(final OHashIndexBucket<K, V> bucket, int startIndex, int endIndex) {
     final OHashIndexBucket.Entry<K, V>[] entries = new OHashIndexBucket.Entry[endIndex - startIndex];
     final Iterator<OHashIndexBucket.Entry<K, V>> iterator = bucket.iterator(startIndex);
@@ -498,6 +501,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
         parent.nodeGlobalDepth));
   }
 
+  @SuppressWarnings("unchecked")
   public OHashIndexBucket.Entry<K, V>[] ceilingEntries(K key) {
     acquireSharedLock();
     try {
@@ -627,6 +631,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public OHashIndexBucket.Entry<K, V>[] lowerEntries(K key) throws IOException {
     acquireSharedLock();
     try {
@@ -676,6 +681,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public OHashIndexBucket.Entry<K, V>[] floorEntries(K key) throws IOException {
     acquireSharedLock();
     try {
@@ -1684,7 +1690,7 @@ public class OLocalHashTable<K, V> extends OSharedResourceAdaptive {
     buffer.release(fileLevelIds[fileLevel], pageIndex);
   }
 
-  private void markPageAsDirty(long pageIndex, int fileLevel) {
+  private void markPageAsDirty(long pageIndex, int fileLevel) throws IOException {
     buffer.markDirty(fileLevelIds[fileLevel], pageIndex);
   }
 

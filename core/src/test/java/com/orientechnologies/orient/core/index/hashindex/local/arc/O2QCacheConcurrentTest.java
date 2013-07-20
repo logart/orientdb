@@ -2,22 +2,9 @@ package com.orientechnologies.orient.core.index.hashindex.local.arc;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -31,7 +18,7 @@ import com.orientechnologies.common.serialization.types.OIntegerSerializer;
 import com.orientechnologies.common.serialization.types.OLongSerializer;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
-import com.orientechnologies.orient.core.index.hashindex.local.cache.O2QCache;
+import com.orientechnologies.orient.core.index.hashindex.local.cache.OReadWriteCache;
 import com.orientechnologies.orient.core.storage.fs.OFileClassic;
 import com.orientechnologies.orient.core.storage.impl.local.paginated.OLocalPaginatedStorage;
 
@@ -45,7 +32,7 @@ public class O2QCacheConcurrentTest {
   private static final int                           THREAD_COUNT    = 4;
   private static final int                           PAGE_COUNT      = 20;
   private static final int                           FILE_COUNT      = 8;
-  private O2QCache                                   buffer;
+  private OReadWriteCache                            buffer;
   private OLocalPaginatedStorage                     storageLocal;
   private ODirectMemory                              directMemory;
   private String[]                                   fileNames;
@@ -58,6 +45,7 @@ public class O2QCacheConcurrentTest {
 
   private AtomicBoolean                              continuousWrite = new AtomicBoolean(true);
   private AtomicInteger                              version         = new AtomicInteger(1);
+  private final boolean                              fileLock        = OGlobalConfiguration.FILE_LOCK.getValueAsBoolean();
 
   @BeforeClass
   public void beforeClass() throws IOException {
@@ -97,7 +85,7 @@ public class O2QCacheConcurrentTest {
   }
 
   private void initBuffer() throws IOException {
-    buffer = new O2QCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
+    buffer = new OReadWriteCache(4 * (8 + systemOffset), 15000, directMemory, null, 8 + systemOffset, storageLocal, true);
   }
 
   @AfterClass
@@ -106,6 +94,7 @@ public class O2QCacheConcurrentTest {
     storageLocal.delete();
 
     deleteUsedFiles(FILE_COUNT);
+    OGlobalConfiguration.FILE_LOCK.setValue(fileLock);
   }
 
   private void deleteUsedFiles(int filesCount) {
@@ -129,7 +118,6 @@ public class O2QCacheConcurrentTest {
     generateRemainingPagesQueueForAllFiles();
 
     executeConcurrentRandomReadAndWriteOperations();
-
     buffer.flushBuffer();
 
     validateFilesContent(version.byteValue());
@@ -147,6 +135,7 @@ public class O2QCacheConcurrentTest {
       future.get();
   }
 
+  @SuppressWarnings("unchecked")
   private void generateRemainingPagesQueueForAllFiles() {
     List<Integer>[] array = new ArrayList[FILE_COUNT];
     for (int k = 0; k < FILE_COUNT; ++k) {
@@ -224,7 +213,6 @@ public class O2QCacheConcurrentTest {
 
       directMemory.set(pointer + systemOffset, new byte[] { version.byteValue(), 2, 3, seed, 5, 6, (byte) fileNumber,
           (byte) (pageIndex & 0xFF) }, 0, 8);
-
       buffer.release(fileIds.get(fileNumber), pageIndex);
     }
 
